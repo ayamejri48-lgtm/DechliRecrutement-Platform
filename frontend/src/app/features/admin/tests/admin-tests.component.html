@@ -1,0 +1,91 @@
+<section class="r-page">
+  <header class="page-head">
+    <div>
+      <h1>Tests</h1>
+    </div>
+  </header>
+
+
+  @if (loading) {
+    <p class="r-empty">Chargement des tests…</p>
+  } @else {
+    <section class="sheet">
+      <h3>Tests par offre</h3>
+      @if (!tests.length) {
+        <p class="r-empty">Aucun test généré.</p>
+      } @else {
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Offre</th>
+                <th class="num">État</th>
+                <th class="num">Candidats</th>
+                <th class="num">Publiées</th>
+                <th class="num">En attente</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of tests; track row.offreId) {
+                <tr>
+                  <td class="offer"><strong>{{ row.title }}</strong></td>
+                  <td class="num">{{ testStatus(row.status) }}</td>
+                  <td class="num">{{ row.assignmentCount }}</td>
+                  <td class="num">{{ row.publishedCount }}</td>
+                  <td class="num">{{ row.unpublishedGradedCount }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="sheet">
+      <div class="r-panel-head">
+        <h3>Candidats</h3>
+        @if (copyStatuses.length) {
+          <label class="mini-filter">
+            État
+            <select [(ngModel)]="copyStatus" name="st">
+              <option value="">Tous</option>
+              @for (status of copyStatuses; track status) {
+                <option [value]="status">{{ copyStatusLabel(status) }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
+      @if (!visibleCopies.length) {
+        <p class="r-empty">Aucun candidat pour ce filtre.</p>
+      } @else {
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Offre</th>
+                <th>Candidat</th>
+                <th>État</th>
+                <th>Note</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of visibleCopies; track row.candidatureId) {
+                <tr>
+                  <td>{{ row.title }}</td>
+                  <td>{{ row.candidateName }}</td>
+                  <td>{{ copyStatusLabel(row.status) }}</td>
+                  <td>{{ scoreOf(row) }}</td>
+                  <td class="end">
+                    <a class="r-btn ghost" [routerLink]="['/admin/candidatures', row.candidatureId, 'dossier']">Profil</a>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+</section>

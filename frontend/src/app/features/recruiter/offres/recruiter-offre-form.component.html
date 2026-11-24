@@ -1,0 +1,429 @@
+<section class="r-page form-page">
+  <header class="form-hero">
+    <div class="form-hero-copy">
+      <p class="eyebrow">{{ isEdit ? 'Édition' : 'Création' }}</p>
+      <h1>{{ isEdit ? 'Modifier l’offre' : 'Nouvelle offre' }}</h1>
+      <p class="lede">
+        @if (!isEdit) {
+          Remplissez les infos du poste, puis ajoutez les compétences pour pouvoir publier.
+        } @else if (currentStatus === 'DRAFT') {
+          Brouillon — ajoutez des compétences, puis publiez quand c’est prêt.
+        } @else if (currentStatus === 'PUBLISHED') {
+          Offre publiée — vous pouvez encore ajuster le contenu.
+        } @else {
+          Offre clôturée — consultation uniquement.
+        }
+      </p>
+    </div>
+    <a routerLink="/recruiter/offres" class="r-btn secondary back-link">
+      <svg class="back-arrow" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M15 6 9 12l6 6"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      Mes offres
+    </a>
+  </header>
+
+  @if (!loading) {
+    <nav class="progress" aria-label="Étapes">
+      <button
+        type="button"
+        class="progress-step"
+        [class.done]="true"
+        [class.on]="activeStep === 'info'"
+        (click)="goStep('info')"
+      >
+        <span class="n">1</span>
+        <span class="t">Infos poste</span>
+      </button>
+      <span class="progress-line" [class.on]="isEdit"></span>
+      <button
+        type="button"
+        class="progress-step"
+        [class.done]="isEdit && skills.length > 0"
+        [class.on]="activeStep === 'skills'"
+        [disabled]="!isEdit"
+        (click)="goStep('skills')"
+      >
+        <span class="n">2</span>
+        <span class="t">Compétences</span>
+        @if (isEdit) {
+          <em>{{ skills.length }}</em>
+        }
+      </button>
+      <span class="progress-line" [class.on]="currentStatus === 'PUBLISHED' || currentStatus === 'CLOSED'"></span>
+      <button
+        type="button"
+        class="progress-step"
+        [class.done]="currentStatus === 'PUBLISHED' || currentStatus === 'CLOSED'"
+        [class.on]="activeStep === 'publish'"
+        [disabled]="!isEdit || currentStatus !== 'DRAFT'"
+        (click)="goStep('publish')"
+      >
+        <span class="n">3</span>
+        <span class="t">Publication</span>
+      </button>
+    </nav>
+  }
+
+  @if (loading) {
+    <p class="r-empty">Chargement…</p>
+  } @else {
+    @if (activeStep === 'info') {
+      <section class="r-panel block">
+        <div class="block-head">
+          <h2>Informations du poste</h2>
+          <p>Les champs marqués * sont obligatoires.</p>
+        </div>
+
+        <form class="r-form" (ngSubmit)="save()" novalidate>
+          <label [class.has-error]="!!fieldErrors['title']">
+            Titre du poste <span class="req">*</span>
+            <input
+              [(ngModel)]="model.title"
+              name="title"
+              maxlength="255"
+              [disabled]="locked"
+              [class.invalid]="!!fieldErrors['title']"
+              (ngModelChange)="clearFieldError('title')"
+              autocomplete="off"
+              placeholder="Ex. Développeur Backend Python"
+            />
+            @if (fieldErrors['title']) {
+              <small class="field-error">{{ fieldErrors['title'] }}</small>
+            }
+          </label>
+
+          <label [class.has-error]="!!fieldErrors['description']">
+            Description <span class="req">*</span>
+            <textarea
+              [(ngModel)]="model.description"
+              name="description"
+              [disabled]="locked"
+              [class.invalid]="!!fieldErrors['description']"
+              (ngModelChange)="clearFieldError('description')"
+              rows="5"
+              placeholder="Missions, stack, contexte de l’équipe…"
+            ></textarea>
+            @if (fieldErrors['description']) {
+              <small class="field-error">{{ fieldErrors['description'] }}</small>
+            }
+          </label>
+
+          <div class="section-label">Conditions</div>
+
+          <div class="r-two">
+            <label [class.has-error]="!!fieldErrors['location']">
+              Lieu <span class="req">*</span>
+              <input
+                [(ngModel)]="model.location"
+                name="location"
+                [disabled]="locked"
+                [class.invalid]="!!fieldErrors['location']"
+                (ngModelChange)="clearFieldError('location')"
+                placeholder="Tunis, Sousse…"
+              />
+              @if (fieldErrors['location']) {
+                <small class="field-error">{{ fieldErrors['location'] }}</small>
+              }
+            </label>
+            <label [class.has-error]="!!fieldErrors['educationLevel']">
+              Niveau d’études <span class="req">*</span>
+              <select
+                [(ngModel)]="model.educationLevel"
+                name="educationLevel"
+                [disabled]="locked"
+                [class.invalid]="!!fieldErrors['educationLevel']"
+                (ngModelChange)="clearFieldError('educationLevel')"
+              >
+                <option value="" disabled>Choisir…</option>
+                @for (lvl of educationOptions; track lvl) {
+                  <option [value]="lvl">{{ lvl }}</option>
+                }
+              </select>
+              @if (fieldErrors['educationLevel']) {
+                <small class="field-error">{{ fieldErrors['educationLevel'] }}</small>
+              }
+            </label>
+          </div>
+
+          <div class="r-two">
+            <label [class.has-error]="!!fieldErrors['contractType']">
+              Contrat <span class="req">*</span>
+              <select
+                [(ngModel)]="model.contractType"
+                name="contractType"
+                [disabled]="locked"
+                [class.invalid]="!!fieldErrors['contractType']"
+                (ngModelChange)="clearFieldError('contractType')"
+              >
+                @for (c of contracts; track c) {
+                  <option [value]="c">{{ c }}</option>
+                }
+              </select>
+            </label>
+            <label [class.has-error]="!!fieldErrors['workMode']">
+              Mode de travail <span class="req">*</span>
+              <select
+                [(ngModel)]="model.workMode"
+                name="workMode"
+                [disabled]="locked"
+                [class.invalid]="!!fieldErrors['workMode']"
+                (ngModelChange)="clearFieldError('workMode')"
+              >
+                @for (m of modes; track m) {
+                  <option [value]="m">{{ labelMode(m) }}</option>
+                }
+              </select>
+            </label>
+          </div>
+
+          <div class="r-three">
+            <label [class.has-error]="!!fieldErrors['experienceYears']">
+              Expérience <span class="req">*</span>
+              <select
+                [(ngModel)]="model.experienceYears"
+                name="experienceYears"
+                [disabled]="locked"
+                [class.invalid]="!!fieldErrors['experienceYears']"
+                (ngModelChange)="clearFieldError('experienceYears')"
+              >
+                @for (y of experienceSelectOptions; track y) {
+                  <option [ngValue]="y">
+                    {{ y === 0 ? 'Débutant' : y === 1 ? '1 an' : y + ' ans' }}
+                  </option>
+                }
+              </select>
+            </label>
+            <label>
+              Postes
+              <input
+                type="number"
+                min="1"
+                max="50"
+                [(ngModel)]="model.postes"
+                name="postes"
+                [disabled]="locked"
+              />
+            </label>
+            <label [class.has-error]="!!fieldErrors['deadline']">
+              Date limite
+              <div class="deadline-row">
+                <input
+                  type="date"
+                  [(ngModel)]="model.deadline"
+                  name="deadline"
+                  [min]="minDeadline"
+                  [max]="maxDeadline"
+                  [disabled]="locked"
+                  [class.invalid]="!!fieldErrors['deadline']"
+                  (ngModelChange)="clearFieldError('deadline')"
+                />
+                @if (model.deadline && !locked) {
+                  <button type="button" class="r-btn ghost" (click)="clearDeadline()">×</button>
+                }
+              </div>
+              @if (fieldErrors['deadline']) {
+                <small class="field-error">{{ fieldErrors['deadline'] }}</small>
+              } @else {
+                <small class="field-hint">Optionnel</small>
+              }
+            </label>
+          </div>
+
+          <div class="form-footer">
+            <button type="submit" class="r-btn" [disabled]="saving || locked || actionBusy">
+              @if (saving) {
+                Enregistrement…
+              } @else if (isEdit) {
+                Enregistrer
+              } @else {
+                Continuer vers les compétences
+              }
+            </button>
+            @if (isEdit && !locked) {
+              <button type="button" class="r-btn ghost" (click)="goStep('skills')">
+                Voir les compétences →
+              </button>
+            }
+          </div>
+        </form>
+      </section>
+    }
+
+    @if (activeStep === 'skills' && isEdit && offreId) {
+      <section class="r-panel block" id="skills">
+        <div class="block-head">
+          <h2>Compétences recherchées</h2>
+          <p>Au moins une compétence est requise pour publier.</p>
+        </div>
+
+        @if (skills.length) {
+          <ul class="skill-chips">
+            @for (s of skills; track s.id) {
+              <li [class.required]="s.required">
+                <div class="chip-body">
+                  <strong>{{ s.name }}</strong>
+                  <span>{{ labelLevel(s.level) }} · {{ s.required ? 'Obligatoire' : 'Souhaitée' }}</span>
+                </div>
+                @if (!locked) {
+                  <div class="chip-ops">
+                    <button type="button" class="linkish" (click)="startEditSkill(s)">Modifier</button>
+                    <button
+                      type="button"
+                      class="linkish danger"
+                      [disabled]="skillBusy"
+                      (click)="removeSkill(s)"
+                    >
+                      Retirer
+                    </button>
+                  </div>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="skills-empty">
+            <p>Ajoutez les technologies et savoir-faire attendus (ex. Java, Angular, SQL).</p>
+          </div>
+        }
+
+        @if (!locked) {
+          <form class="skill-add" (ngSubmit)="submitSkill()">
+            <div class="skill-add-grid">
+              <label class="grow">
+                Compétence
+                <input
+                  [(ngModel)]="skillForm.name"
+                  name="skillName"
+                  required
+                  placeholder="Ex. Python, Docker…"
+                  autocomplete="off"
+                />
+              </label>
+              <label>
+                Niveau
+                <select [(ngModel)]="skillForm.level" name="skillLevel">
+                  @for (l of skillLevels; track l) {
+                    <option [value]="l">{{ labelLevel(l) }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Priorité
+                <div class="prio-toggle" role="group" aria-label="Priorité de la compétence">
+                  <button
+                    type="button"
+                    [class.on]="skillForm.required"
+                    (click)="skillForm.required = true"
+                  >
+                    Obligatoire
+                  </button>
+                  <button
+                    type="button"
+                    [class.on]="!skillForm.required"
+                    (click)="skillForm.required = false"
+                  >
+                    Souhaitée
+                  </button>
+                </div>
+              </label>
+              <div class="skill-add-actions">
+                <button type="submit" class="r-btn" [disabled]="skillBusy || !skillForm.name.trim()">
+                  {{ editingSkillId != null ? 'Mettre à jour' : 'Ajouter' }}
+                </button>
+                @if (editingSkillId != null) {
+                  <button type="button" class="r-btn ghost" (click)="cancelSkillEdit()">Annuler</button>
+                }
+              </div>
+            </div>
+          </form>
+        }
+
+        <div class="form-footer">
+          <button type="button" class="r-btn ghost" (click)="goStep('info')">← Infos poste</button>
+          @if (currentStatus === 'DRAFT') {
+            <button
+              type="button"
+              class="r-btn"
+              [disabled]="actionBusy || !skills.length"
+              [title]="!skills.length ? 'Ajoutez au moins une compétence' : null"
+              (click)="goStep('publish')"
+            >
+              Continuer vers la publication →
+            </button>
+          }
+        </div>
+      </section>
+    }
+
+    @if (activeStep === 'publish' && isEdit) {
+      <section class="r-panel block publish-block">
+        <div class="block-head">
+          <h2>Publication</h2>
+          <p>Vérifiez le résumé, puis publiez l’offre.</p>
+        </div>
+
+        <div class="summary">
+          <div>
+            <span>Titre</span>
+            <strong>{{ model.title || '—' }}</strong>
+          </div>
+          <div>
+            <span>Lieu · Contrat</span>
+            <strong>{{ model.location || '—' }} · {{ model.contractType }} · {{ labelMode(model.workMode) }}</strong>
+          </div>
+          <div>
+            <span>Compétences</span>
+            <strong>{{ skills.length }} définie{{ skills.length > 1 ? 's' : '' }}</strong>
+          </div>
+        </div>
+
+        @if (!skills.length) {
+          <p class="r-alert warn">
+            Ajoutez au moins une compétence avant de publier.
+            <button type="button" class="text-btn" (click)="goStep('skills')">Y aller</button>
+          </p>
+        }
+
+        <div class="form-footer">
+          <button type="button" class="r-btn ghost" (click)="goStep('skills')">← Compétences</button>
+          @if (currentStatus === 'DRAFT') {
+            <button
+              type="button"
+              class="r-btn"
+              [disabled]="saving || actionBusy || !skills.length"
+              (click)="publish()"
+            >
+              Publier l’offre
+            </button>
+            <button
+              type="button"
+              class="r-btn secondary"
+              [disabled]="saving || actionBusy"
+              (click)="saveAsDraft()"
+            >
+              Enregistrer comme brouillon
+            </button>
+          }
+          @if (currentStatus === 'PUBLISHED') {
+            <button
+              type="button"
+              class="r-btn secondary"
+              [disabled]="saving || actionBusy"
+              (click)="closeOffre()"
+            >
+              Clôturer
+            </button>
+          }
+        </div>
+      </section>
+    }
+  }
+</section>

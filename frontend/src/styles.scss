@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Marque — teal profond, sobre */
+  --brand: #156e68;
+  --brand-dark: #0a4542;
+  --brand-soft: #e4efed;
+  --sage: #9db5b0;
+  --mint: #e8efed;
+
+  /* Surfaces */
+  --ink: #0e2426;
+  --muted: #5a6f6d;
+  --paper: #f2f5f4;
+  --surface: #fafbfa;
+  --card: #ffffff;
+  --line: #e2ece9;
+  --ivory: #f2f5f4;
+  --white: #ffffff;
+
+  /* Alias legacy (compat composants existants) */
+  --teal: var(--brand);
+  --teal-deep: var(--brand-dark);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}

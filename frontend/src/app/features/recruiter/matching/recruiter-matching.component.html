@@ -1,0 +1,658 @@
+<section class="r-page match-page">
+  <header class="page-hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Espace recruteur</p>
+      <h1>Matching IA</h1>
+      <p class="lede">
+        Classez les candidatures, comparez matching et test, décidez plus vite.
+      </p>
+    </div>
+    <a routerLink="/recruiter/candidatures" class="r-btn secondary hero-link">Candidatures</a>
+  </header>
+
+
+  <div class="workspace">
+    <details class="match-legend">
+      <summary>
+        <span class="legend-title">Formule du score</span>
+        <span class="legend-chevron" aria-hidden="true"></span>
+      </summary>
+      <div class="legend-body">
+        <p>
+          Score hybride :
+          <strong>compétences 50&nbsp;%</strong> ·
+          <strong>texte 20&nbsp;%</strong> ·
+          <strong>expérience 20&nbsp;%</strong> ·
+          <strong>formation 10&nbsp;%</strong>.
+        </p>
+        <ul class="legend-bands">
+          <li><span class="dot high"></span> Élevé = 70&nbsp;%</li>
+          <li><span class="dot medium"></span> Moyen 40–69&nbsp;%</li>
+          <li><span class="dot low"></span> Faible &lt; 40&nbsp;%</li>
+        </ul>
+      </div>
+    </details>
+
+    <section class="command-panel">
+      @if (loadingOffres) {
+        <p class="r-empty">Chargement des offres…</p>
+      } @else if (!offres.length) {
+        <p class="r-empty">
+          Aucune offre publiée ou clôturée.
+          <a routerLink="/recruiter/offres">Voir mes offres</a>
+        </p>
+      } @else {
+        <div class="command-top">
+          <label class="field grow">
+            <span>Offre à analyser</span>
+            <select
+              [(ngModel)]="selectedOffreId"
+              (ngModelChange)="onOffreChange()"
+              [disabled]="loadingMatches || batchBusy"
+            >
+              @for (o of offres; track o.id) {
+                <option [ngValue]="o.id">
+                  {{ o.title }} — {{ labelOffreStatus(o.status) }}
+                </option>
+              }
+            </select>
+          </label>
+          <div class="controls-actions">
+            <button
+              type="button"
+              class="r-btn secondary"
+              [disabled]="loadingMatches || batchBusy || selectedOffreId == null"
+              (click)="reloadMatches()"
+            >
+              Actualiser
+            </button>
+            <button
+              type="button"
+              class="r-btn"
+              [disabled]="
+                loadingMatches ||
+                batchBusy ||
+                selectedOffreId == null ||
+                !offerHasSkills
+              "
+              (click)="computeMissing()"
+            >
+              {{ batchBusy ? 'Calcul…' : 'Noter les nouveaux' }}
+            </button>
+          </div>
+        </div>
+
+        @if (selectedOffre && !loadingMatches) {
+          <div class="command-meta" [attr.data-status]="selectedOffre.status">
+            <div>
+              <span class="offer-kicker">Offre active</span>
+              <strong>{{ selectedOffre.title }}</strong>
+            </div>
+            <span class="r-chip" [class.published]="selectedOffre.status === 'PUBLISHED'" [class.closed]="selectedOffre.status === 'CLOSED'">
+              {{ labelOffreStatus(selectedOffre.status) }}
+            </span>
+          </div>
+        }
+      }
+    </section>
+
+    @if (selectedOffre && !loadingMatches) {
+      <section class="analytics" aria-label="Statistiques matching">
+        <div class="analytics-main">
+          <div class="ring-block">
+            <div class="ring" [ngStyle]="bandRingStyle" aria-hidden="true">
+              <div class="ring-hole">
+                <strong>{{ scoresReady }}</strong>
+                <span>notés</span>
+              </div>
+            </div>
+            <ul class="ring-legend">
+              <li><i class="dot high"></i> Élevé <b>{{ bandCountHigh }}</b></li>
+              <li><i class="dot medium"></i> Moyen <b>{{ bandCountMedium }}</b></li>
+              <li><i class="dot low"></i> Faible <b>{{ bandCountLow }}</b></li>
+            </ul>
+          </div>
+
+          <div class="gauge-stack">
+            <div class="gauge">
+              <div class="gauge-head">
+                <span>Couverture matching</span>
+                <strong>{{ coverageShare }}%</strong>
+              </div>
+              <div class="gauge-track">
+                <span [style.width.%]="coverageShare"></span>
+              </div>
+              <small>{{ scoresReady }} / {{ candidatures.length }} candidatures scorées</small>
+            </div>
+            <div class="gauge">
+              <div class="gauge-head">
+                <span>Postes pourvus</span>
+                <strong>{{ acceptedOnOffer }}/{{ postesCap }}</strong>
+              </div>
+              <div class="gauge-track postes">
+                <span [style.width.%]="postesShare"></span>
+              </div>
+              <small>{{ postesCap - acceptedOnOffer }} poste(s) encore ouvert(s)</small>
+            </div>
+            <div class="gauge-kpis">
+              <div>
+                <span>À calculer</span>
+                <strong>{{ pendingComputeCount }}</strong>
+              </div>
+              <div>
+                <span>Prêts à décider</span>
+                <strong>{{ readyCount }}</strong>
+              </div>
+              <div>
+                <span>Moyenne</span>
+                <strong>{{ avgScoreLabel }}{{ avgScoreLabel !== '—' ? '%' : '' }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        @if (offerHasSkills) {
+          <div class="skills-rail">
+            @if (requiredSkills.length) {
+              <div class="skill-group">
+                <span class="sg-label">Exigées</span>
+                <div class="chips">
+                  @for (s of requiredSkills; track s.id) {
+                    <span class="chip req">{{ s.name }}</span>
+                  }
+                </div>
+              </div>
+            }
+            @if (optionalSkills.length) {
+              <div class="skill-group">
+                <span class="sg-label">Souhaitées</span>
+                <div class="chips">
+                  @for (s of optionalSkills; track s.id) {
+                    <span class="chip opt">{{ s.name }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      @if (topRecommended.length) {
+        <section class="top-recos" aria-label="Meilleurs profils">
+          <div class="top-recos-head">
+            <h3>Top recommandé</h3>
+            <p>Les meilleurs scores pour cette offre.</p>
+          </div>
+          <div class="top-recos-grid">
+            @for (row of topRecommended; track row.match.id; let i = $index) {
+              <button
+                type="button"
+                class="top-card"
+                [attr.data-band]="row.match.scoreBand"
+                [attr.data-place]="i + 1"
+                (click)="selectRow(row)"
+              >
+                <span class="top-rank">{{ i === 0 ? '1er' : (i + 1) + 'e' }}</span>
+                <strong>{{ row.candidateLabel }}</strong>
+                <div class="top-meter" aria-hidden="true">
+                  <span [style.width.%]="scoreValue(row.match.score)"></span>
+                </div>
+                <span class="top-scores">
+                  <em>{{ scorePercent(row.match.score) }}% matching</em>
+                  <em>Test {{ row.testLabel }}</em>
+                </span>
+                @if (row.readyToDecide) {
+                  <span class="ready-badge">Prêt à décider</span>
+                }
+              </button>
+            }
+          </div>
+        </section>
+      }
+    }
+
+    @if (selectedOffreId != null && !loadingMatches && !offerHasSkills) {
+      <div class="r-alert warn skills-missing-banner">
+        <div>
+          <strong>Il manque les compétences sur cette offre</strong>
+          <p>
+            Ajoutez-les pour pouvoir classer les CV
+            @if (candidatures.length) {
+              — {{ candidatures.length }} candidature(s) en attente.
+            } @else {
+              .
+            }
+          </p>
+        </div>
+        @if (skillsEditLink) {
+          <a class="r-btn" [routerLink]="skillsEditLink">Compléter l’offre</a>
+        }
+      </div>
+    }
+
+    <div class="match-stage">
+      <!-- Shortlist -->
+      <section class="shortlist" aria-live="polite">
+        <div class="shortlist-head">
+          <div class="shortlist-title">
+            <div>
+              <h2>Shortlist</h2>
+              <p>Sélectionnez un profil pour lire le détail du matching.</p>
+            </div>
+            @if (offerHasSkills && !loadingMatches && (rankedRows.length || pendingComputeCount)) {
+              <div class="insight-pills">
+                <span class="pill"><b>{{ rankedRows.length }}</b> classés</span>
+                @if (avgScoreLabel !== '—') {
+                  <span class="pill"><b>{{ avgScoreLabel }}%</b> moy.</span>
+                }
+                @if (highFitCount) {
+                  <span class="pill good"><b>{{ highFitCount }}</b> élevés</span>
+                }
+                @if (pendingComputeCount) {
+                  <span class="pill wait"><b>{{ pendingComputeCount }}</b> à noter</span>
+                }
+              </div>
+            }
+          </div>
+          <div class="band-filters" role="group" aria-label="Filtrer la liste matching">
+            <span class="band-label">Vue</span>
+            <div class="band-seg">
+              <button type="button" class="chip-filter" [class.on]="viewFocus === 'all'" (click)="setViewFocus('all')">Tous</button>
+              <button type="button" class="chip-filter" [class.on]="viewFocus === 'ready'" (click)="setViewFocus('ready')">
+                Scores prêts · {{ scoresReady }}
+              </button>
+              <button type="button" class="chip-filter" [class.on]="viewFocus === 'missing'" (click)="setViewFocus('missing')">
+                À calculer · {{ pendingComputeCount }}
+              </button>
+            </div>
+            @if (viewFocus !== 'missing') {
+              <span class="band-label">Niveau</span>
+              <div class="band-seg">
+                <button type="button" class="chip-filter" [class.on]="bandFilter === 'all'" (click)="bandFilter = 'all'">Tous</button>
+                <button type="button" class="chip-filter" [class.on]="bandFilter === 'high'" (click)="bandFilter = 'high'">Élevé</button>
+                <button type="button" class="chip-filter" [class.on]="bandFilter === 'medium'" (click)="bandFilter = 'medium'">Moyen</button>
+                <button type="button" class="chip-filter" [class.on]="bandFilter === 'low'" (click)="bandFilter = 'low'">Faible</button>
+              </div>
+            }
+          </div>
+        </div>
+
+        @if (loadingMatches) {
+          <div class="list-loading">
+            <div class="r-skeleton sk-row"></div>
+            <div class="r-skeleton sk-row"></div>
+            <div class="r-skeleton sk-row"></div>
+          </div>
+        } @else if (!selectedOffreId) {
+          <div class="empty-block">
+            <p class="empty-title">Choisissez une offre</p>
+            <p class="empty-text">Le classement s’affichera ici.</p>
+          </div>
+        } @else if (!offerHasSkills) {
+          <div class="empty-block">
+            <p class="empty-title">En attente des compétences</p>
+            <p class="empty-text">Complétez l’offre pour lancer le matching.</p>
+          </div>
+        } @else if (!candidatures.length) {
+          <div class="empty-block">
+            <p class="empty-title">Pas encore de candidatures</p>
+            <p class="empty-text">Dès qu’un profil postule, il apparaîtra ici.</p>
+          </div>
+        } @else if (!rows.length) {
+          <div class="empty-block">
+            <p class="empty-title">Pas encore de scores</p>
+            <p class="empty-text">{{ candidatures.length }} candidature(s) à noter.</p>
+            <button type="button" class="r-btn" [disabled]="batchBusy" (click)="computeMissing()">
+              Noter les nouveaux
+            </button>
+          </div>
+        } @else if (viewFocus === 'missing') {
+          @if (!pendingComputeList.length && !unrankedRows.length) {
+            <div class="empty-block">
+              <p class="empty-title">Rien à calculer</p>
+              <p class="empty-text">Toutes les candidatures de cette offre ont un score.</p>
+            </div>
+          } @else {
+            @if (pendingComputeList.length) {
+              <div class="unranked">
+                <h3>Sans score ({{ pendingComputeList.length }})</h3>
+                <ul class="cand-list compact">
+                  @for (c of pendingComputeList; track c.id) {
+                    <li class="cand-row">
+                      <div class="cand-hit static">
+                        <span class="avatar sm" aria-hidden="true">{{ initials(candidateLabelOf(c)) }}</span>
+                        <span class="cand-main">
+                          <strong>{{ candidateLabelOf(c) }}</strong>
+                          <small>{{ labelCandidatureStatus(c.status) }}</small>
+                        </span>
+                      </div>
+                      <a
+                        class="dossier-link"
+                        [routerLink]="['/recruiter/candidatures', c.id, 'dossier']"
+                      >Profil</a>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+            @if (unrankedRows.length) {
+              <div class="unranked">
+                <h3>Non classés</h3>
+                <ul class="cand-list compact">
+                  @for (row of unrankedRows; track row.match.id) {
+                    <li class="cand-row" [class.active]="selected?.match?.id === row.match.id">
+                      <button type="button" class="cand-hit" (click)="selectRow(row)">
+                        <span class="avatar sm" aria-hidden="true">{{ initials(row.candidateLabel) }}</span>
+                        <span class="cand-main">
+                          <strong>{{ row.candidateLabel }}</strong>
+                        </span>
+                        <span class="score-badge" [attr.data-band]="row.match.scoreBand">
+                          <em>{{ bandLabel(row.match.scoreBand) }}</em>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        class="linkish"
+                        [disabled]="busyId === row.match.candidatureId || batchBusy"
+                        (click)="recalculate(row)"
+                      >Réessayer</button>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+            <div class="list-actions">
+              <button type="button" class="r-btn" [disabled]="batchBusy || !pendingComputeCount" (click)="computeMissing()">
+                {{ batchBusy ? 'Calcul…' : 'Noter les nouveaux' }}
+              </button>
+            </div>
+          }
+        } @else if (viewFocus === 'ready' && !rankedRows.length) {
+          <div class="empty-block">
+            <p class="empty-title">Aucun score prêt</p>
+            <p class="empty-text">Calculez d’abord le matching pour cette offre.</p>
+            <button type="button" class="r-btn" [disabled]="batchBusy || !pendingComputeCount" (click)="computeMissing()">
+              {{ batchBusy ? 'Calcul…' : 'Noter les nouveaux' }}
+            </button>
+          </div>
+        } @else {
+          @if (rankedRows.length) {
+            <ul class="cand-list">
+              @for (row of rankedRows; track row.match.id) {
+                <li
+                  class="cand-row"
+                  [class.active]="selected?.match?.id === row.match.id"
+                  [class.ready]="row.readyToDecide"
+                  [attr.data-rank]="row.match.rank"
+                  [attr.data-band]="row.match.scoreBand"
+                >
+                  <button type="button" class="cand-hit" (click)="selectRow(row)">
+                    <span class="rank-mark">{{ row.match.rank }}</span>
+                    <span class="avatar" aria-hidden="true">{{ initials(row.candidateLabel) }}</span>
+                    <span class="cand-main">
+                      <strong>
+                        {{ row.candidateLabel }}
+                        @if (row.readyToDecide) {
+                          <span class="ready-badge inline">Prêt à décider</span>
+                        }
+                      </strong>
+                      <small>{{ labelCandidatureStatus(row.candidatureStatus) }} · Test {{ row.testLabel }}</small>
+                      <span class="meter" aria-hidden="true">
+                        <span
+                          class="meter-fill"
+                          [style.width.%]="scoreValue(row.match.score)"
+                          [attr.data-band]="row.match.scoreBand"
+                        ></span>
+                      </span>
+                    </span>
+                    <span class="score-stack">
+                      <span class="score-badge" [attr.data-band]="row.match.scoreBand">
+                        <b>{{ scorePercent(row.match.score) }}@if (row.match.score != null) {%}</b>
+                        <em>{{ bandLabel(row.match.scoreBand) }}</em>
+                      </span>
+                      <span class="test-pill" [class.has-score]="row.testScore != null">
+                        Test {{ row.testLabel }}
+                      </span>
+                    </span>
+                  </button>
+                  <div class="row-actions">
+                    @if (row.canInvite) {
+                      <button
+                        type="button"
+                        class="linkish"
+                        [disabled]="inviteBusyId === row.match.candidatureId"
+                        (click)="inviteRow(row, $event)"
+                      >Inviter</button>
+                    }
+                    <button
+                      type="button"
+                      class="linkish"
+                      [disabled]="busyId === row.match.candidatureId || batchBusy"
+                      (click)="recalculate(row, $event)"
+                    >Recalculer</button>
+                    <a
+                      class="dossier-link"
+                      [routerLink]="['/recruiter/candidatures', row.match.candidatureId, 'dossier']"
+                    >Profil</a>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (viewFocus === 'all' && unrankedRows.length) {
+            <div class="unranked">
+              <h3>Non classés</h3>
+              <ul class="cand-list compact">
+                @for (row of unrankedRows; track row.match.id) {
+                  <li class="cand-row" [class.active]="selected?.match?.id === row.match.id">
+                    <button type="button" class="cand-hit" (click)="selectRow(row)">
+                      <span class="avatar sm" aria-hidden="true">{{ initials(row.candidateLabel) }}</span>
+                      <span class="cand-main">
+                        <strong>{{ row.candidateLabel }}</strong>
+                      </span>
+                      <span class="score-badge" [attr.data-band]="row.match.scoreBand">
+                        <em>{{ bandLabel(row.match.scoreBand) }}</em>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      class="linkish"
+                      [disabled]="busyId === row.match.candidatureId || batchBusy"
+                      (click)="recalculate(row)"
+                    >Réessayer</button>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        }
+      </section>
+
+      <!-- Profil -->
+      <aside class="profile-sheet">
+        @if (!selected) {
+          <div class="profile-empty">
+            <div class="profile-empty-art" aria-hidden="true"></div>
+            <p class="empty-title">Aperçu du profil</p>
+            <p class="empty-text">Sélectionnez un candidat dans la shortlist.</p>
+          </div>
+        } @else {
+          <div class="profile-hero" [attr.data-band]="selected.match.scoreBand">
+            <span class="avatar lg" aria-hidden="true">{{ initials(selected.candidateLabel) }}</span>
+            <div class="profile-id">
+              <strong>{{ selected.candidateLabel }}</strong>
+              <small>{{ labelCandidatureStatus(selected.candidatureStatus) }}</small>
+            </div>
+            <div class="profile-score">
+              <b>{{ scorePercent(selected.match.score) }}@if (selected.match.score != null) {<span>%</span>}</b>
+              <em>{{ bandLabel(selected.match.scoreBand) }}</em>
+            </div>
+          </div>
+
+          <div class="fit-stack">
+            <div class="fit-row">
+              <div class="fit-label">
+                <span>Compétences</span>
+                <b>{{ coveragePct(selected.match.features?.skills_coverage) }}%</b>
+              </div>
+              <div class="fit-bar">
+                <span
+                  [style.width.%]="coveragePct(selected.match.features?.skills_coverage)"
+                ></span>
+              </div>
+            </div>
+            <div class="fit-row">
+              <div class="fit-label">
+                <span>Expérience</span>
+                <b>{{ experienceLabel(selected.match) }}</b>
+              </div>
+              <div class="fit-bar">
+                <span
+                  class="mid"
+                  [class.neutral]="selected.match.features?.experience_match == null"
+                  [style.width.%]="
+                    selected.match.features?.experience_match == null
+                      ? 100
+                      : coveragePct(selected.match.features?.experience_match)
+                  "
+                ></span>
+              </div>
+              <small>{{ experienceHint(selected.match) }}</small>
+            </div>
+            <div class="fit-row">
+              <div class="fit-label">
+                <span>Formation</span>
+                <b>{{ educationLabel(selected.match) }}</b>
+              </div>
+              <div class="fit-bar">
+                <span
+                  class="edu"
+                  [class.neutral]="selected.match.features?.education_match == null"
+                  [style.width.%]="
+                    selected.match.features?.education_match == null
+                      ? 100
+                      : coveragePct(selected.match.features?.education_match)
+                  "
+                ></span>
+              </div>
+              <small>{{ educationHint(selected.match) }}</small>
+            </div>
+          </div>
+
+          <div class="skill-block">
+            <h3>Points communs</h3>
+            @if (!matchedSkills(selected.match).length) {
+              <p class="muted">Aucun</p>
+            } @else {
+              <div class="chips">
+                @for (s of matchedSkills(selected.match); track s) {
+                  <span class="chip ok">{{ s }}</span>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="skill-block">
+            <h3>Obligatoires manquantes</h3>
+            @if (!missingRequired(selected.match).length) {
+              <p class="muted">Aucune</p>
+            } @else {
+              <div class="chips">
+                @for (s of missingRequired(selected.match); track s) {
+                  <span class="chip ko">{{ s }}</span>
+                }
+              </div>
+            }
+          </div>
+
+          @if (explanations(selected.match).length) {
+            <div class="skill-block">
+              <h3>En résumé</h3>
+              <ul class="expl">
+                @for (e of explanations(selected.match); track e) {
+                  <li>{{ e }}</li>
+                }
+              </ul>
+            </div>
+          }
+
+          <div class="decide-box">
+            <p class="decide-title">Décision</p>
+            @if (selected.readyToDecide) {
+              <p class="decide-hint">Matching et test prêts.</p>
+            } @else {
+              <p class="decide-hint">
+                {{ acceptBlockedReason(selected) || 'Complétez matching et test avant d’accepter.' }}
+              </p>
+            }
+            <div class="decide-actions">
+              @if (
+                selected.candidatureStatus !== 'WITHDRAWN' &&
+                selected.candidatureStatus !== 'ACCEPTED' &&
+                selected.candidatureStatus !== 'REJECTED'
+              ) {
+                <button
+                  type="button"
+                  class="r-btn secondary"
+                  [disabled]="decideBusyId === selected.match.candidatureId"
+                  (click)="decide(selected, 'UNDER_REVIEW')"
+                >En revue</button>
+                <button
+                  type="button"
+                  class="r-btn"
+                  [disabled]="decideBusyId === selected.match.candidatureId || !acceptAllowed(selected)"
+                  [attr.title]="acceptBlockedReason(selected)"
+                  (click)="decide(selected, 'ACCEPTED')"
+                >Accepter</button>
+                <button
+                  type="button"
+                  class="r-btn danger"
+                  [disabled]="decideBusyId === selected.match.candidatureId"
+                  (click)="decide(selected, 'REJECTED')"
+                >Refuser</button>
+              } @else if (
+                selected.candidatureStatus === 'ACCEPTED' ||
+                selected.candidatureStatus === 'REJECTED'
+              ) {
+                <button
+                  type="button"
+                  class="r-btn secondary"
+                  [disabled]="decideBusyId === selected.match.candidatureId"
+                  (click)="decide(selected, 'UNDER_REVIEW')"
+                >Remettre en revue</button>
+              }
+            </div>
+          </div>
+
+          <div class="profile-actions">
+            <button
+              type="button"
+              class="pa-btn solid"
+              [disabled]="busyId === selected.match.candidatureId || batchBusy"
+              (click)="recalculate(selected)"
+            >
+              Mettre à jour le score
+            </button>
+            @if (selected.canInvite) {
+              <button
+                type="button"
+                class="pa-btn soft"
+                [disabled]="inviteBusyId === selected.match.candidatureId"
+                (click)="inviteSelected()"
+              >
+                {{ inviteBusyId === selected.match.candidatureId ? 'Envoi…' : 'Inviter au test' }}
+              </button>
+            }
+            <a
+              class="pa-btn ghost"
+              [routerLink]="['/recruiter/candidatures', selected.match.candidatureId, 'dossier']"
+            >
+              Voir le profil
+            </a>
+          </div>
+        }
+      </aside>
+    </div>
+  </div>
+</section>

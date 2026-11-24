@@ -1,0 +1,75 @@
+<section class="r-page">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Recrutement</p>
+      <h1>Candidatures</h1>
+      @if (day) { <p class="hint">{{ dayTitle() }}</p> }
+    </div>
+  </header>
+
+  <div class="filters">
+    <label class="grow">Recherche<input [(ngModel)]="q" name="q" placeholder="Candidat ou offre" (ngModelChange)="page = 1" /></label>
+    <label>Statut
+      <select [(ngModel)]="status" name="st" (ngModelChange)="page = 1">
+        <option value="">Tous</option>
+        <option value="PENDING">En attente</option>
+        <option value="UNDER_REVIEW">En revue</option>
+        <option value="ACCEPTED">Acceptée</option>
+        <option value="REJECTED">Refusée</option>
+        <option value="WITHDRAWN">Retirée</option>
+      </select>
+    </label>
+    <label>Tri
+      <select [(ngModel)]="sortKey" name="sk" (ngModelChange)="page = 1">
+        <option value="date">Date</option>
+        <option value="name">Candidat</option>
+        <option value="match">Matching</option>
+      </select>
+    </label>
+    <button type="button" class="r-btn ghost" (click)="toggleDir()">{{ sortDir === 'asc' ? 'Croissant' : 'Décroissant' }}</button>
+  </div>
+
+  @if (loading) {
+    <p class="r-empty">Chargement des candidatures…</p>
+  } @else if (!filtered.length) {
+    <p class="r-empty">Aucune candidature ne correspond.</p>
+  } @else {
+    <section class="sheet">
+      <div class="pager">
+        <span>{{ view.total }} candidature(s) · {{ view.page }}/{{ view.pages }}</span>
+        <button type="button" class="r-btn ghost" [disabled]="view.page <= 1" (click)="page = view.page - 1">Précédent</button>
+        <button type="button" class="r-btn ghost" [disabled]="view.page >= view.pages" (click)="page = view.page + 1">Suivant</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Candidat</th>
+              <th>Offre</th>
+              <th>Dépôt</th>
+              <th>Matching</th>
+              <th>Test</th>
+              <th>Statut</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of view.rows; track r.id) {
+              <tr>
+                <td><strong>{{ r.candidateName }}</strong></td>
+                <td>{{ r.offreTitle || 'Offre sans titre' }}</td>
+                <td class="num">{{ r.appliedAt | date: 'dd/MM/yyyy' }}</td>
+                <td class="num">{{ matchLabel(r) }}</td>
+                <td class="num">{{ testLabel(r.id) }}</td>
+                <td><span class="r-chip" [ngClass]="statusClass(r.status)">{{ labelStatus(r.status) }}</span></td>
+                <td class="end">
+                  <a class="r-btn ghost" [routerLink]="['/admin/candidatures', r.id, 'dossier']">Profil</a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</section>

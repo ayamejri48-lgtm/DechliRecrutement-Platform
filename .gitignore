@@ -1,0 +1,12 @@
+**/.env
+**/.venv/
+**/venv/
+**/node_modules/
+**/target/
+**/.angular/
+**/dist/
+**/__pycache__/
+**/*.pyc
+**/.idea/
+**/.pytest_cache/
+**/models/*.joblib

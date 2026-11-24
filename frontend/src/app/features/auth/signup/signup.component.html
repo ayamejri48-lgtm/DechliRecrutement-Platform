@@ -1,0 +1,117 @@
+<div class="page">
+  <aside class="showcase">
+    <img
+      class="showcase-photo"
+      src="assets/recruitment-hero.png"
+      alt=""
+      aria-hidden="true">
+    <div class="showcase-veil"></div>
+
+    <div class="showcase-inner">
+      <a routerLink="/" class="brand" aria-label="DechliRecrutement, accueil">
+        <img src="assets/dechli-logo.png" alt="DechliRecrutement">
+      </a>
+
+      <div class="showcase-copy">
+        <h1>Votre talent,&nbsp;votre&nbsp;avenir.</h1>
+        <p>
+          Créez votre profil, découvrez des offres adaptées
+          et postulez en quelques minutes.
+        </p>
+      </div>
+
+      <p class="showcase-foot">DechliRecrutement</p>
+    </div>
+  </aside>
+
+  <main class="form-panel">
+    <div class="form-stage">
+      <a routerLink="/" class="mobile-brand" aria-label="DechliRecrutement, accueil">
+        <img src="assets/dechli-logo.png" alt="DechliRecrutement">
+      </a>
+
+      <header class="form-header">
+        <h2>Créer un compte</h2>
+        <p>Commencez votre parcours professionnel dès aujourd’hui.</p>
+      </header>
+
+      <div *ngIf="success()" class="alert success" role="status">
+        Compte créé avec succès.
+        <a routerLink="/login">Se connecter</a>
+      </div>
+      <div *ngIf="error()" class="alert error" role="alert">{{ error() }}</div>
+
+      <form *ngIf="!success()" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="two-col">
+          <label class="field">
+            <span class="field-label">Prénom</span>
+            <input formControlName="firstName" placeholder="Ex. Amine" autocomplete="given-name">
+            <small *ngIf="invalid('firstName')">Prénom obligatoire.</small>
+          </label>
+          <label class="field">
+            <span class="field-label">Nom</span>
+            <input formControlName="lastName" placeholder="Ex. Ben Ali" autocomplete="family-name">
+            <small *ngIf="invalid('lastName')">Nom obligatoire.</small>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Adresse e-mail</span>
+          <input type="email" formControlName="email" placeholder="vous@exemple.com" autocomplete="email">
+          <small *ngIf="invalid('email')">Saisissez une adresse e-mail valide.</small>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Téléphone</span>
+          <input type="tel" formControlName="phone" placeholder="+216 XX XXX XXX" autocomplete="tel">
+          <small *ngIf="invalid('phone')">Le téléphone est obligatoire.</small>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Mot de passe</span>
+          <div class="password">
+            <input
+              [type]="showPassword() ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="8 caractères minimum"
+              autocomplete="new-password">
+            <button
+              class="toggle"
+              type="button"
+              (click)="showPassword.set(!showPassword())"
+              [attr.aria-pressed]="showPassword()"
+              [attr.aria-label]="showPassword() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'">
+              {{ showPassword() ? 'Masquer' : 'Afficher' }}
+            </button>
+          </div>
+          <small *ngIf="invalid('password')">
+            8 caractères min., majuscule, minuscule, chiffre et caractère spécial (@$!%*?&amp;._-).
+          </small>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Confirmer le mot de passe</span>
+          <input
+            type="password"
+            formControlName="confirmPassword"
+            placeholder="Confirmez votre mot de passe"
+            autocomplete="new-password">
+          <small *ngIf="form.hasError('passwordMismatch') && form.get('confirmPassword')?.touched">
+            Les mots de passe ne correspondent pas.
+          </small>
+        </label>
+
+        <button class="submit" type="submit" [disabled]="loading()">
+          {{ loading() ? 'Création…' : 'Créer mon compte' }}
+        </button>
+      </form>
+
+      <p class="switch">
+        Vous avez déjà un compte&nbsp;?
+        <a routerLink="/login">Se connecter</a>
+      </p>
+
+      <p class="trust">En créant un compte, vous acceptez les conditions d’utilisation.</p>
+    </div>
+  </main>
+</div>

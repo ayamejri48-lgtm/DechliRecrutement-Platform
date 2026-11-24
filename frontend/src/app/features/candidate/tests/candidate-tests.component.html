@@ -1,0 +1,307 @@
+<section class="c-tests" [class.embedded]="embedded">
+  @if (!embedded) {
+    <header class="head">
+      <div>
+        <p class="eyebrow">Espace candidat</p>
+        <h1>Mes tests techniques</h1>
+        <p class="lede">
+          Commencez un test, répondez dans le temps imparti, puis consultez vos
+          résultats une fois publiés.
+        </p>
+      </div>
+      <a routerLink="/candidate/dashboard" class="back">← Tableau de bord</a>
+    </header>
+  }
+
+
+  <!-- RÉSULTATS -->
+  @if (result) {
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="kicker">Résultats</p>
+          <h2>{{ offerTitle(result.assignment) }}</h2>
+        </div>
+        <button type="button" class="ghost" (click)="closePaper()">
+          Retour à la liste
+        </button>
+      </div>
+
+      <div class="score-hero">
+        <div>
+          <span>Score total</span>
+          <strong>{{ result.assignment.scoreTotal | number: '1.0-1' }}</strong>
+        </div>
+        <div class="score-split">
+          <span>QCM <b>{{ result.assignment.scoreMcq | number: '1.0-1' }}</b></span>
+          <span>Ouvertes <b>{{ result.assignment.scoreOpen | number: '1.0-1' }}</b></span>
+        </div>
+      </div>
+
+      <ul class="result-list">
+        @for (a of result.answers; track a.questionId) {
+          <li>
+            <div class="q-head">
+              <span class="badge">{{ a.type === 'MCQ' ? 'QCM' : 'Ouverte' }}</span>
+              <strong>Question {{ a.position }}</strong>
+              <em>{{ (a.score ?? 0) | number: '1.0-1' }} / {{ a.maxScore }}</em>
+            </div>
+            <p class="prompt">{{ a.prompt }}</p>
+            @if (a.feedback) {
+              <p class="feedback">💬 {{ a.feedback }}</p>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+
+  <!-- PASSAGE DU TEST -->
+  } @else if (paper && activeId != null && currentQuestion) {
+    <section class="panel attempt" [class.locked]="integrityLocked">
+      @if (integrityWarn) {
+        <div class="integrity-banner" [class.locked]="integrityLocked" role="alert">
+          <div>
+            <strong>{{ integrityLocked ? 'Test bloqué' : 'Avertissement intégrité' }}</strong>
+            <p>{{ integrityWarn }}</p>
+            @if (!integrityLocked) {
+              <p class="count">
+                Incidents : {{ incidentCount }} / {{ incidentLimit }}
+              </p>
+            }
+          </div>
+          @if (!integrityLocked) {
+            <button type="button" class="ghost" (click)="reenterFullscreen()">
+              Revenir en plein écran
+            </button>
+          }
+        </div>
+      }
+
+      <div class="timer-bar sticky">
+        <div class="timer-left">
+          <span>Temps restant</span>
+          <strong [class.urgent]="(remainingSec ?? 0) < 60">
+            {{ formatTime(remainingSec) }}
+          </strong>
+          @if (saveHint) {
+            <em class="save-hint">{{ saveHint }}</em>
+          }
+        </div>
+        <div class="timer-right">
+          <span class="progress-label">
+            {{ answeredCount }}/{{ paper.questions.length }} répondues
+          </span>
+          <button
+            type="button"
+            class="primary"
+            [disabled]="busy || integrityLocked"
+            (click)="submit()"
+          >
+            Envoyer mon test
+          </button>
+        </div>
+      </div>
+
+      <div class="progress-track" aria-hidden="true">
+        <i [style.width.%]="progressPct"></i>
+      </div>
+
+      <div class="q-nav">
+        @for (q of paper.questions; track q.id; let i = $index) {
+          <button
+            type="button"
+            class="dot"
+            [class.active]="i === currentIndex"
+            [class.done]="isAnswered(q)"
+            (click)="goQ(i)"
+            [attr.aria-label]="'Question ' + (i + 1)"
+          >
+            {{ i + 1 }}
+          </button>
+        }
+      </div>
+
+      <article class="question focus">
+        <header>
+          <span class="badge">
+            {{ currentQuestion.type === 'MCQ' ? 'Choix multiple' : 'Réponse libre' }}
+          </span>
+          <strong>
+            Question {{ currentQuestion.position }}
+            <span class="of">/ {{ paper.questions.length }}</span>
+          </strong>
+          <em>{{ currentQuestion.maxScore }} pts</em>
+        </header>
+        <p class="prompt">{{ currentQuestion.prompt }}</p>
+
+        @if (currentQuestion.type === 'MCQ' && currentQuestion.options) {
+          <div class="options" [class.disabled]="integrityLocked">
+            @for (key of optionKeys(currentQuestion); track key) {
+              <label [class.picked]="answers[currentQuestion.id]?.option === key">
+                <input
+                  type="radio"
+                  [name]="'q' + currentQuestion.id"
+                  [value]="key"
+                  [checked]="answers[currentQuestion.id]?.option === key"
+                  [disabled]="integrityLocked"
+                  (change)="setOption(currentQuestion, key)"
+                />
+                <span><b>{{ key }}.</b> {{ currentQuestion.options![key] }}</span>
+              </label>
+            }
+          </div>
+        } @else {
+          <textarea
+            rows="7"
+            [ngModel]="answers[currentQuestion.id]?.text || ''"
+            (ngModelChange)="setText(currentQuestion, $event)"
+            (blur)="onTextBlur(currentQuestion)"
+            [disabled]="integrityLocked"
+            placeholder="Écrivez votre réponse ici… (sauvegarde automatique)"
+          ></textarea>
+        }
+      </article>
+
+      <div class="nav-actions">
+        <button
+          type="button"
+          class="ghost"
+          [disabled]="currentIndex === 0 || integrityLocked"
+          (click)="prevQ()"
+        >
+          ← Précédente
+        </button>
+        @if (currentIndex < paper.questions.length - 1) {
+          <button
+            type="button"
+            class="primary soft"
+            [disabled]="integrityLocked"
+            (click)="nextQ()"
+          >
+            Suivante →
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="primary"
+            [disabled]="busy || integrityLocked"
+            (click)="submit()"
+          >
+            Terminer et envoyer
+          </button>
+        }
+      </div>
+    </section>
+
+  <!-- LISTE -->
+  } @else {
+    <div class="howto">
+      <div><b>1</b> Commencez le test</div>
+      <div><b>2</b> Répondez avant la fin du chrono</div>
+      <div><b>3</b> Consultez les résultats publiés</div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Vos invitations</h2>
+        <button type="button" class="ghost" [disabled]="loading" (click)="reload()">
+          Actualiser
+        </button>
+      </div>
+
+      @if (loading) {
+        <p class="empty">Chargement de vos tests…</p>
+      } @else if (!assignments.length) {
+        <div class="empty-box">
+          <p>Aucune invitation pour le moment.</p>
+          <p class="muted">
+            Dès qu’un recruteur vous invite, le test apparaîtra ici.
+          </p>
+        </div>
+      } @else {
+        @if (actionable.length) {
+          <h3 class="group-title">À faire</h3>
+          <ul class="assign-list">
+            @for (a of actionable; track a.id) {
+              <li>
+                <div class="card-main">
+                  <strong>{{ offerTitle(a) }}</strong>
+                  <span class="chip" [attr.data-kind]="statusClass(a.status)">
+                    {{ labelStatus(a.status) }}
+                  </span>
+                  <p class="hint">{{ statusHint(a.status) }}</p>
+                  @if (a.startDeadlineAt && a.status === 'PENDING') {
+                    <p class="muted">
+                      À démarrer avant le
+                      {{ a.startDeadlineAt | date: "dd/MM/yyyy 'à' HH:mm" }}
+                    </p>
+                  }
+                </div>
+                <button
+                  type="button"
+                  class="primary"
+                  [disabled]="busy"
+                  (click)="onCardAction(a)"
+                >
+                  {{ actionLabel(a) }}
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (waiting.length) {
+          <h3 class="group-title">Passés — résultats en attente</h3>
+          <ul class="assign-list">
+            @for (a of waiting; track a.id) {
+              <li class="idle">
+                <div class="card-main">
+                  <strong>{{ offerTitle(a) }}</strong>
+                  <span class="chip" [attr.data-kind]="statusClass(a.status)">
+                    {{ labelStatus(a.status) }}
+                  </span>
+                  <p class="hint">{{ statusHint(a.status) }}</p>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (done.length) {
+          <h3 class="group-title">Terminés</h3>
+          <ul class="assign-list">
+            @for (a of done; track a.id) {
+              <li>
+                <div class="card-main">
+                  <strong>{{ offerTitle(a) }}</strong>
+                  <span class="chip" [attr.data-kind]="statusClass(a.status)">
+                    {{ labelStatus(a.status) }}
+                  </span>
+                  <p class="hint">{{ statusHint(a.status) }}</p>
+                  @if (a.status === 'PUBLISHED' && a.scoreTotal != null) {
+                    <p class="score-simple">
+                      Score
+                      <b>{{ a.scoreTotal | number: '1.0-0' }}</b>
+                      <span>/ 100</span>
+                    </p>
+                  }
+                </div>
+
+                @if (canAct(a)) {
+                  <button
+                    type="button"
+                    class="primary"
+                    [disabled]="busy"
+                    (click)="onCardAction(a)"
+                  >
+                    {{ actionLabel(a) }}
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        }
+      }
+    </section>
+  }
+</section>

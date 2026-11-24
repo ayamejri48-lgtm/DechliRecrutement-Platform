@@ -1,0 +1,289 @@
+<section class="r-page desk">
+  <div class="dash-welcome">
+    <div class="dash-welcome-copy">
+      <p class="dash-hello">Bonjour{{ firstName ? ', ' + firstName : '' }}</p>
+      <h2>Prêt à piloter vos recrutements&nbsp;?</h2>
+      <p>Offres, matching, tests et décisions — en un coup d’œil.</p>
+      <div class="dash-cta-row">
+        <a routerLink="/recruiter/offre/new" class="dash-cta">Créer une offre</a>
+        <a routerLink="/recruiter/candidatures" class="dash-cta ghost">Voir les candidatures</a>
+      </div>
+    </div>
+    <div class="dash-welcome-visual" aria-hidden="true"></div>
+  </div>
+
+  @if (bootstrapping) {
+    <div class="r-metrics">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="r-skeleton sk-metric"></div>
+      }
+    </div>
+  } @else {
+    <section class="kpi-strip" aria-label="Indicateurs offres">
+      <a routerLink="/recruiter/offres" class="kpi">
+        <span>Offres</span>
+        <strong>{{ stats.total }}</strong>
+      </a>
+      <a routerLink="/recruiter/offres" [queryParams]="{ status: 'PUBLISHED' }" class="kpi">
+        <span>Publiées</span>
+        <strong class="tone-pub">{{ stats.published }}</strong>
+      </a>
+      <a routerLink="/recruiter/offres" [queryParams]="{ status: 'DRAFT' }" class="kpi">
+        <span>Brouillons</span>
+        <strong class="tone-draft">{{ stats.draft }}</strong>
+      </a>
+      <a routerLink="/recruiter/offres" [queryParams]="{ status: 'CLOSED' }" class="kpi">
+        <span>Clôturées</span>
+        <strong class="tone-closed">{{ stats.closed }}</strong>
+      </a>
+      <a routerLink="/recruiter/candidatures" class="kpi">
+        <span>Candidatures</span>
+        <strong class="tone-apps">{{ pipelineLoading ? '…' : stats.applications }}</strong>
+      </a>
+    </section>
+
+    <div class="dash-main">
+      <section class="board-card pipeline-board">
+        <header class="board-head">
+          <div>
+            <h3>Pipeline</h3>
+            <p>{{ pipelineTotal }} candidature{{ pipelineTotal > 1 ? 's' : '' }}</p>
+          </div>
+          <a routerLink="/recruiter/candidatures" class="text-link">Ouvrir</a>
+        </header>
+
+        @if (pipelineLoading) {
+          <div class="r-skeleton sk-bar"></div>
+        } @else {
+          <div class="flow-bar" aria-hidden="true">
+            @for (step of pipelineSteps; track step.key) {
+              @if (step.count > 0) {
+                <a
+                  [attr.data-tone]="step.tone"
+                  [style.flex]="step.count + ' 1 0'"
+                  routerLink="/recruiter/candidatures"
+                  [queryParams]="{ status: step.key }"
+                  [attr.title]="step.label + ' · ' + step.count"
+                ></a>
+              }
+            }
+            @if (pipelineTotal === 0) {
+              <span class="flow-empty"></span>
+            }
+          </div>
+          <div class="flow-legend">
+            @for (step of pipelineSteps; track step.key) {
+              <a
+                routerLink="/recruiter/candidatures"
+                [queryParams]="{ status: step.key }"
+                [attr.data-tone]="step.tone"
+              >
+                <i></i>
+                <span>{{ step.label }}</span>
+                <strong>{{ step.count }}</strong>
+              </a>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="board-card cal-board">
+        <header class="board-head">
+          <div>
+            <h3>Clôtures</h3>
+            <p>{{ upcomingDeadlineCount }} deadline{{ upcomingDeadlineCount > 1 ? 's' : '' }} à venir</p>
+          </div>
+          <div class="cal-controls">
+            <button type="button" class="icon-btn" (click)="shiftMonth(-1)" aria-label="Mois précédent">‹</button>
+            <span class="month-label">{{ calMonthLabel }}</span>
+            <button type="button" class="icon-btn" (click)="shiftMonth(1)" aria-label="Mois suivant">›</button>
+            <button type="button" class="ghost-btn" (click)="goCalToday()">Aujourd’hui</button>
+          </div>
+        </header>
+
+        <div class="cal-body">
+          <div class="cal-main">
+            <div class="cal-week">
+              @for (d of weekDays; track d) {
+                <span>{{ d }}</span>
+              }
+            </div>
+            <div class="cal-grid" role="grid" aria-label="Calendrier des deadlines">
+              @for (cell of calCells; track $index) {
+                @if (cell.inMonth && cell.key) {
+                  <button
+                    type="button"
+                    class="cal-day"
+                    [class.today]="cell.isToday"
+                    [class.deadline]="cell.hasDeadline"
+                    [class.open]="selectedDeadlineKey === cell.key"
+                    (click)="onCalDayClick(cell)"
+                  >
+                    {{ cell.day }}
+                    @if (cell.hasDeadline) {
+                      <i aria-hidden="true"></i>
+                    }
+                  </button>
+                } @else {
+                  <span class="cal-day muted" aria-hidden="true"></span>
+                }
+              }
+            </div>
+          </div>
+
+          <aside class="cal-detail">
+            @if (selectedDeadlineKey) {
+              <p class="detail-date">{{ selectedDeadlineLabel }}</p>
+              <ul class="detail-list">
+                @for (o of selectedDeadlineOffers; track o.id) {
+                  <li>
+                    <a [routerLink]="['/recruiter/offre', o.id, 'edit']">
+                      <strong>{{ o.title }}</strong>
+                      <small>{{ o.location || '—' }} · {{ o.deadline | date: 'dd MMM' }}</small>
+                    </a>
+                  </li>
+                }
+              </ul>
+            } @else if (nextClosingOffers.length) {
+              <p class="detail-date muted">Prochaines clôtures</p>
+              <ul class="detail-list">
+                @for (o of nextClosingOffers; track o.id) {
+                  <li>
+                    <a [routerLink]="['/recruiter/offre', o.id, 'edit']">
+                      <strong>{{ o.title }}</strong>
+                      <small>{{ o.deadline | date: 'EEE dd MMM' }} · {{ o.location || '—' }}</small>
+                    </a>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="detail-idle">Aucune clôture planifiée</p>
+            }
+          </aside>
+        </div>
+      </section>
+    </div>
+
+    <section class="board-card activity-board">
+      <header class="board-head">
+        <div>
+          <h3>Activité IA</h3>
+          <p>Matching et tests techniques</p>
+        </div>
+        <div class="head-links">
+          <a routerLink="/recruiter/matching" class="text-link">Matching</a>
+          <a routerLink="/recruiter/evaluations" class="text-link">Tests</a>
+        </div>
+      </header>
+
+      <div class="metric-row" role="tablist" aria-label="Filtres activité">
+        <button type="button" role="tab" [class.on]="activityOpen === 'ready'" (click)="openActivity('ready')">
+          <strong>{{ matchReady }}</strong>
+          <span>Scores prêts</span>
+        </button>
+        <button type="button" role="tab" class="warn" [class.on]="activityOpen === 'missing'" (click)="openActivity('missing')">
+          <strong>{{ matchMissing }}</strong>
+          <span>À calculer</span>
+        </button>
+        <button type="button" role="tab" [class.on]="activityOpen === 'invited'" (click)="openActivity('invited')">
+          <strong>{{ testInvited }}</strong>
+          <span>Invités</span>
+        </button>
+        <button type="button" role="tab" [class.on]="activityOpen === 'scored'" (click)="openActivity('scored')">
+          <strong>{{ testScored }}</strong>
+          <span>Notés / publiés</span>
+        </button>
+        <button type="button" role="tab" class="warn" [class.on]="activityOpen === 'expired'" (click)="openActivity('expired')">
+          <strong>{{ testExpired }}</strong>
+          <span>Expirés</span>
+        </button>
+      </div>
+
+      @if (activityOpen) {
+        <div class="activity-list-panel">
+          @if (insightsLoading) {
+            <p class="muted-line">Chargement…</p>
+          } @else if (!activityList.length) {
+            <p class="muted-line">Aucun élément.</p>
+          } @else {
+            <ul class="activity-list">
+              @for (row of activityList; track row.key) {
+                <li>
+                  <span class="av">{{ row.candidateName.charAt(0) }}</span>
+                  <div class="act-copy">
+                    <strong>{{ row.candidateName }}</strong>
+                    <small>{{ row.offreTitle }} · {{ row.detail }}</small>
+                  </div>
+                  <div class="act-ops">
+                    <a
+                      class="act-btn ghost"
+                      [routerLink]="['/recruiter/candidatures', row.candidatureId, 'dossier']"
+                    >Profil</a>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </section>
+
+    <div class="dash-grid">
+      <section class="board-card">
+        <header class="board-head">
+          <div>
+            <h3>Offres récentes</h3>
+          </div>
+          <a routerLink="/recruiter/offres" class="text-link">Tout voir</a>
+        </header>
+        @if (!myOffres.length) {
+          <p class="muted-line">Aucune offre pour le moment.</p>
+        } @else {
+          <ul class="simple-list">
+            @for (o of myOffres.slice(0, 5); track o.id) {
+              <li>
+                <div>
+                  <strong>{{ o.title }}</strong>
+                  <small>{{ o.location }} · {{ o.contractType }}</small>
+                </div>
+                <span class="r-chip" [ngClass]="statusClass(o.status)">{{ statusLabel(o.status) }}</span>
+                <a class="text-link" [routerLink]="['/recruiter/offre', o.id, 'edit']">Éditer</a>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <section class="board-card">
+        <header class="board-head">
+          <div>
+            <h3>À traiter</h3>
+          </div>
+          <a routerLink="/recruiter/candidatures" [queryParams]="{ status: 'PENDING' }" class="text-link">Pipeline</a>
+        </header>
+        @if (pipelineLoading && !todoCandidatures.length) {
+          <div class="r-skeleton sk-row"></div>
+          <div class="r-skeleton sk-row"></div>
+        } @else if (!todoCandidatures.length) {
+          <p class="muted-line">Rien en attente.</p>
+        } @else {
+          <ul class="simple-list">
+            @for (c of todoCandidatures; track c.id) {
+              <li>
+                <div>
+                  <strong>{{ c.candidateName }}</strong>
+                  <small>{{ c.offreTitle }} · {{ c.appliedAt | date: 'dd MMM' }}</small>
+                </div>
+                <span class="r-chip" [ngClass]="statusClass(c.status)">{{ statusLabel(c.status) }}</span>
+                <a
+                  class="text-link"
+                  [routerLink]="['/recruiter/candidatures', c.id, 'dossier']"
+                >Profil</a>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </div>
+  }
+</section>

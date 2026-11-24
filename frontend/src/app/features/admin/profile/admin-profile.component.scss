@@ -1,0 +1,49 @@
+@use '../admin-shared' as *;
+@use '../../recruiter/profile/recruiter-profile.component.scss';
+
+.profile-sheet {
+  background: #fff;
+  border: 1px solid #e3eeeb;
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(16, 40, 59, 0.05);
+
+  .identity-card {
+    border: 0;
+    border-radius: 18px 18px 0 0;
+    box-shadow: none;
+  }
+}
+
+.coords {
+  padding: 4px 24px 22px;
+  border-top: 1px solid #e7efec;
+}
+
+.photo-edit {
+  margin: 0 24px 8px;
+}
+
+.icon-edit {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d5e4e0;
+  border-radius: 10px;
+  background: #fff;
+  color: #156e68;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+
+  svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &:hover { background: #e7f4f2; }
+}

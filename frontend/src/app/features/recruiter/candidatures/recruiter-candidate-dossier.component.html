@@ -1,0 +1,240 @@
+<section class="r-page dossier-page">
+  <a routerLink="/recruiter/candidatures" class="back">Retour aux candidatures</a>
+
+
+
+  @if (loading) {
+    <p class="r-empty">Chargement du profil…</p>
+  } @else if (!dossier && error) {
+    <p class="r-empty">Impossible d’afficher ce profil.</p>
+  } @else if (dossier) {
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">{{ dossier.offreTitle }}</p>
+        <h1>{{ fullName(dossier) }}</h1>
+        <p class="when">{{ dossier.appliedAt | date: 'longDate' }}</p>
+      </div>
+      <span class="r-chip" [ngClass]="chipClass(dossier.status)">
+        {{ labelStatus(dossier.status) }}
+      </span>
+    </header>
+
+    <section class="score-line">
+      <div>
+        <span>Matching</span>
+        <strong>{{ matchHeadline() }}</strong>
+      </div>
+      <div>
+        <span>Test technique</span>
+        <strong>{{ extrasReady ? testScoreLabel() : '…' }}</strong>
+      </div>
+      <div>
+        @if (dossier.cv) {
+          <button
+            type="button"
+            class="r-btn"
+            [disabled]="cvBusy"
+            (click)="cvUrl ? closeCv() : openCv()"
+          >
+            {{ cvBusy ? 'Chargement…' : cvUrl ? 'Fermer le CV' : 'Consulter le CV' }}
+          </button>
+        } @else {
+          <span>CV</span>
+          <strong>Indisponible</strong>
+        }
+      </div>
+    </section>
+
+    @if (cvUrl) {
+      <iframe class="cv-frame" [src]="cvUrl" title="CV du candidat"></iframe>
+    }
+
+    <section class="ops-panel">
+      <div class="ops-copy">
+        <p class="ops-title">Décision recruteur</p>
+        <p class="ops-hint">
+          @if (dossier.status === 'WITHDRAWN') {
+            Candidature retirée — aucune action possible.
+          } @else if (acceptBlockedReason() && dossier.status !== 'ACCEPTED' && dossier.status !== 'REJECTED') {
+            {{ acceptBlockedReason() }}
+          } @else {
+            Matching, test et décision sur ce profil.
+          }
+        </p>
+      </div>
+      <div class="ops-actions">
+        @if (dossier.status !== 'WITHDRAWN' && dossier.status !== 'ACCEPTED' && dossier.status !== 'REJECTED') {
+          @if (canInvite) {
+            <button
+              type="button"
+              class="r-btn secondary"
+              [disabled]="inviteBusy"
+              (click)="invite()"
+            >
+              {{ inviteBusy ? 'Envoi…' : 'Inviter au test' }}
+            </button>
+          }
+          <button
+            type="button"
+            class="r-btn secondary"
+            [disabled]="busy"
+            (click)="decide('UNDER_REVIEW')"
+          >
+            En revue
+          </button>
+          <button
+            type="button"
+            class="r-btn"
+            [disabled]="busy || cannotAccept()"
+            [attr.title]="acceptBlockedReason()"
+            (click)="decide('ACCEPTED')"
+          >
+            Accepter
+          </button>
+          <button
+            type="button"
+            class="r-btn danger"
+            [disabled]="busy"
+            (click)="decide('REJECTED')"
+          >
+            Refuser
+          </button>
+        } @else if (dossier.status === 'ACCEPTED' || dossier.status === 'REJECTED') {
+          <button
+            type="button"
+            class="r-btn secondary"
+            [disabled]="busy"
+            (click)="decide('UNDER_REVIEW')"
+          >
+            Remettre en revue
+          </button>
+        }
+
+        @if (matchMissing || !match) {
+          <button
+            type="button"
+            class="r-btn secondary"
+            [disabled]="matchBusy"
+            (click)="computeMatch(false)"
+          >
+            {{ matchBusy ? 'Calcul…' : 'Lancer le matching' }}
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="r-btn ghost"
+            [disabled]="matchBusy"
+            (click)="computeMatch(true)"
+          >
+            {{ matchBusy ? 'Recalcul…' : 'Recalculer' }}
+          </button>
+        }
+        <a class="r-btn ghost" routerLink="/recruiter/matching">Classement</a>
+        <a
+          class="r-btn ghost"
+          [routerLink]="['/recruiter/offre', dossier.offreId, 'edit']"
+        >Offre</a>
+      </div>
+    </section>
+
+    @if (featureRows().length || explanations().length || matchedSkills().length || missingSkills().length) {
+      <section class="r-panel">
+        <h3>Lecture du matching</h3>
+        @if (featureRows().length) {
+          <div class="facts">
+            @for (row of featureRows(); track row.label) {
+              <div>
+                <span>{{ row.label }}</span>
+                <strong>{{ row.value }}</strong>
+              </div>
+            }
+          </div>
+        }
+        @if (matchedSkills().length) {
+          <p class="skill-line">
+            <span>Présentes</span> {{ matchedSkills().join(', ') }}
+          </p>
+        }
+        @if (missingSkills().length) {
+          <p class="skill-line miss">
+            <span>Absentes</span> {{ missingSkills().join(', ') }}
+          </p>
+        }
+        @if (explanations().length) {
+          <ul class="explain">
+            @for (line of explanations(); track line) {
+              <li>{{ line }}</li>
+            }
+          </ul>
+        }
+      </section>
+    }
+
+    @if (candidateApps.length > 1) {
+      <section class="r-panel">
+        <h3>Autres candidatures ({{ postsCount }} postes)</h3>
+        <ul class="other-apps">
+          @for (app of candidateApps; track app.id) {
+            <li [class.current]="app.id === dossier.candidatureId">
+              <a [routerLink]="['/recruiter/candidatures', app.id, 'dossier']">
+                {{ app.offreTitle }}
+              </a>
+              <span class="r-chip tiny" [ngClass]="chipClass(app.status)">
+                {{ labelStatus(app.status) }}
+              </span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (dossier.description) {
+      <section class="r-panel">
+        <h3>Présentation</h3>
+        <p class="desc">{{ dossier.description }}</p>
+      </section>
+    }
+
+    <div class="grid">
+      <section class="r-panel">
+        <h3>Compétences</h3>
+        @if (!dossier.skills.length) {
+          <p class="r-empty">Aucune.</p>
+        } @else {
+          @for (s of dossier.skills; track s.id) {
+            <div class="line">
+              <strong>{{ s.name }}</strong>
+              <small>{{ labelLevel(s.level) }}</small>
+            </div>
+          }
+        }
+      </section>
+      <section class="r-panel">
+        <h3>Expériences</h3>
+        @if (!dossier.experiences.length) {
+          <p class="r-empty">Aucune.</p>
+        } @else {
+          @for (e of dossier.experiences; track e.id) {
+            <div class="line">
+              <strong>{{ e.jobTitle }}</strong>
+              <small>{{ e.company }}</small>
+            </div>
+          }
+        }
+      </section>
+      <section class="r-panel">
+        <h3>Formations</h3>
+        @if (!dossier.educations.length) {
+          <p class="r-empty">Aucune.</p>
+        } @else {
+          @for (e of dossier.educations; track e.id) {
+            <div class="line">
+              <strong>{{ e.degree }}</strong>
+              <small>{{ e.institution }}</small>
+            </div>
+          }
+        }
+      </section>
+    </div>
+  }
+</section>

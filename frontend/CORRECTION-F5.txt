@@ -1,0 +1,13 @@
+CORRECTION F5 - 29/10/2026
+
+Cause: role.guard.ts renvoyait directement vers /login lorsque le JWT en memoire disparaissait au rechargement.
+Correction: le guard restaure la session via /auth/session/refresh (cookie HttpOnly) puis verifie le role.
+
+Tests: verification TypeScript (tsc --noEmit) OK. Build Angular non verifiable ici: archive contient des dependances Windows (esbuild win32) incompatibles avec Linux.
+
+Demarrage sous Windows:
+  npm install --legacy-peer-deps
+  npm start
+Puis: connexion, dashboard, F5.
+
+Si 403 sur /auth/session/refresh: verifier le controle Origin dans le backend SessionController et la transmission par la Gateway. Ne pas supprimer la protection CSRF sans alternative.

@@ -1,0 +1,94 @@
+<section class="r-page profile-page">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Compte</p>
+      <h1>Profil</h1>
+    </div>
+  </header>
+
+
+
+  @if (loading) {
+    <p class="r-empty">Chargement…</p>
+  } @else if (user) {
+    <section class="profile-sheet">
+    <div class="identity-card">
+      <div class="hero-photo-wrap">
+        <div class="avatar-lg" [class.has-img]="!!displayPhoto">
+          @if (displayPhoto) {
+            <img [src]="displayPhoto" alt="" (error)="photoBroken = true" />
+          } @else {
+            {{ initials }}
+          }
+        </div>
+        <button type="button" class="photo-cam" (click)="openPhotoEditor(photoFileInput)" aria-label="Photo">✎</button>
+        <input #photoFileInput type="file" accept="image/jpeg,image/png,image/webp" (change)="selectProfilePhoto($event)" hidden />
+      </div>
+      <div class="identity-copy">
+        <h2>{{ user.firstName }} {{ user.lastName }}</h2>
+        <p>{{ user.email }}</p>
+        <span class="r-chip">ADMIN</span>
+      </div>
+    </div>
+
+    @if (editingPhoto && photoPreviewUrl) {
+      <section class="photo-edit">
+        <strong>Réglez votre photo</strong>
+        <div
+          class="photo-stage"
+          [class.dragging]="photoDragging"
+          (pointerdown)="onPhotoPointerDown($event)"
+          (pointermove)="onPhotoPointerMove($event)"
+          (pointerup)="onPhotoPointerUp($event)"
+          (pointercancel)="onPhotoPointerUp($event)"
+        >
+          <img [src]="photoPreviewUrl" [style.transform]="photoTransform" alt="" draggable="false" />
+        </div>
+        <label class="photo-zoom">Zoom <input type="range" min="1" max="2.5" step="0.02" [(ngModel)]="photoZoom" name="z" /></label>
+        <div class="r-actions">
+          <button type="button" class="r-btn ghost" (click)="photoFileInput.click()" [disabled]="savingPhoto">
+            Autre image
+          </button>
+          <button type="button" class="r-btn" [disabled]="savingPhoto" (click)="savePhoto()">Enregistrer</button>
+          <button type="button" class="r-btn ghost" (click)="cancelEditPhoto()" [disabled]="savingPhoto">Annuler</button>
+        </div>
+      </section>
+    }
+
+    <div class="coords">
+      <div class="r-panel-head">
+        <h3>Coordonnées</h3>
+        @if (!editing) {
+          <button type="button" class="icon-edit" (click)="startEdit()" aria-label="Modifier les coordonnées">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 20h4l10.5-10.5-4-4L4 16v4z"/>
+              <path d="M13 7l4 4"/>
+            </svg>
+          </button>
+        }
+      </div>
+      @if (!editing) {
+        <div class="info-grid">
+          <div><span>Prénom</span><strong>{{ user.firstName }}</strong></div>
+          <div><span>Nom</span><strong>{{ user.lastName }}</strong></div>
+          <div><span>Email</span><strong>{{ user.email }}</strong></div>
+          <div><span>Téléphone</span><strong>{{ user.phone || '—' }}</strong></div>
+        </div>
+      } @else {
+        <form class="r-form" (ngSubmit)="save()">
+          <div class="r-two">
+            <label>Prénom<input [(ngModel)]="form.firstName" name="fn" required /></label>
+            <label>Nom<input [(ngModel)]="form.lastName" name="ln" required /></label>
+          </div>
+          <label>Email (non modifiable)<input [value]="user.email" disabled /></label>
+          <label>Téléphone<input [(ngModel)]="form.phone" name="ph" /></label>
+          <div class="r-actions">
+            <button type="submit" class="r-btn" [disabled]="saving">Enregistrer</button>
+            <button type="button" class="r-btn secondary" (click)="cancel()">Annuler</button>
+          </div>
+        </form>
+      }
+    </div>
+    </section>
+  }
+</section>

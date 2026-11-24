@@ -1,0 +1,30 @@
+@use '../admin-shared' as *;
+
+.back {
+  color: #156e68;
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.pulse {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+
+  div {
+    display: grid;
+    gap: 4px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    background: #0a4542;
+    color: #d7ece8;
+  }
+
+  span { font-size: 12px; font-weight: 650; }
+  strong { font-size: 28px; color: #fff; letter-spacing: -0.04em; }
+}
+
+@media (max-width: 800px) {
+  .pulse { grid-template-columns: 1fr; }
+}

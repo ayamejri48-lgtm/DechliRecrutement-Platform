@@ -1,0 +1,476 @@
+<section class="r-page eval-page">
+  <header class="page-hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Tests techniques</p>
+      <h1>Évaluations</h1>
+      <p class="lede">Générez le sujet, invitez les candidats, corrigez et publiez les notes.</p>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <div class="zone zone-offer">
+      @if (loadingOffres) {
+        <p class="muted">Chargement…</p>
+      } @else if (!offres.length) {
+        <p class="muted">
+          Aucune offre publiée ou clôturée.
+          <a routerLink="/recruiter/offres">Voir mes offres</a>
+        </p>
+      } @else {
+        <label class="field">
+          <span>Offre</span>
+          <div class="field-row">
+            <select
+              [(ngModel)]="selectedOffreId"
+              (ngModelChange)="onOffreChange()"
+              [disabled]="busy || loadingTest"
+            >
+              @for (o of offres; track o.id) {
+                <option [ngValue]="o.id">{{ o.title }}</option>
+              }
+            </select>
+            <button
+              type="button"
+              class="r-btn secondary"
+              [disabled]="busy || selectedOffreId == null"
+              (click)="reloadAll()"
+            >
+              Actualiser
+            </button>
+          </div>
+        </label>
+      }
+    </div>
+
+    @if (selectedOffreId != null) {
+      <nav class="progress" aria-label="Parcours test">
+        <button
+          type="button"
+          class="progress-step"
+          [class.on]="activePanel === 'test'"
+          [class.done]="!!test && test.status !== 'FAILED' && test.status !== 'GENERATING'"
+          (click)="goPanel('test')"
+        >
+          <span class="n">1</span>
+          <span class="t">Test</span>
+        </button>
+        <span class="progress-line" [class.on]="!!test && (test.status === 'READY' || test.status === 'ASSIGNED')"></span>
+        <button
+          type="button"
+          class="progress-step"
+          [class.on]="activePanel === 'invite'"
+          [class.done]="assignments.length > 0"
+          [disabled]="!(test && (test.status === 'READY' || test.status === 'ASSIGNED'))"
+          (click)="goPanel('invite')"
+        >
+          <span class="n">2</span>
+          <span class="t">Invitations</span>
+          @if (inviteableCount) {
+            <em>{{ inviteableCount }}</em>
+          }
+        </button>
+        <span class="progress-line" [class.on]="assignments.length > 0"></span>
+        <button
+          type="button"
+          class="progress-step"
+          [class.on]="activePanel === 'sessions'"
+          [class.done]="publishedCount > 0"
+          (click)="goPanel('sessions')"
+        >
+          <span class="n">3</span>
+          <span class="t">Sessions</span>
+          @if (assignments.length) {
+            <em>{{ assignments.length }}</em>
+          }
+        </button>
+      </nav>
+
+      @if (activePanel === 'test') {
+        <div class="zone">
+          <div class="zone-title">
+            <h2>Sujet du test</h2>
+            @if (test) {
+              <span class="pill" [attr.data-tone]="statusTone(test.status)">
+                {{ labelStatus(test.status) }}
+              </span>
+            }
+          </div>
+
+          @if (loadingTest) {
+            <p class="muted">Chargement…</p>
+          } @else if (!test) {
+            <div class="empty-panel">
+              <p>Aucun test pour cette offre.</p>
+              <p class="muted">Générez un sujet à partir de l’offre (compétences + description).</p>
+              <button type="button" class="r-btn" [disabled]="busy" (click)="generate()">
+                {{ busy ? 'Lancement…' : 'Générer le test' }}
+              </button>
+            </div>
+          } @else {
+            <div class="test-summary">
+              <div>
+                <span>Difficulté</span>
+                <strong>{{ labelDifficulty(test.difficulty) }}</strong>
+              </div>
+              <div>
+                <span>Durée</span>
+                <strong>{{ durationMin }} min</strong>
+              </div>
+              <div>
+                <span>Questions</span>
+                <strong>{{ questionCount }}</strong>
+              </div>
+            </div>
+
+            @if (test.status === 'GENERATING') {
+              <p class="note warn">Génération en cours… actualisation automatique.</p>
+            }
+            @if (test.status === 'FAILED') {
+              <p class="note bad">{{ test.errorMessage || 'Échec de la génération.' }}</p>
+            }
+
+            <div class="inline-action">
+              @if (test.status === 'READY' || test.status === 'FAILED') {
+                <button
+                  type="button"
+                  class="r-btn secondary"
+                  [disabled]="busy || test.regenerateCount >= 1"
+                  (click)="regenerate()"
+                >
+                  Régénérer ({{ test.regenerateCount }}/1)
+                </button>
+              }
+              @if (questionCount) {
+                <details class="q-preview">
+                  <summary>Voir les questions ({{ questionCount }})</summary>
+                  <ol>
+                    @for (q of test.questions; track q.id) {
+                      <li>
+                        <b>{{ q.type === 'MCQ' ? 'QCM' : 'Ouverte' }}</b>
+                        {{ q.prompt }}
+                        <em>{{ q.maxScore }} pts</em>
+                      </li>
+                    }
+                  </ol>
+                </details>
+              }
+              @if (test.status === 'READY' || test.status === 'ASSIGNED') {
+                <button type="button" class="r-btn" (click)="goPanel('invite')">
+                  Continuer vers les invitations →
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (activePanel === 'invite' && test && (test.status === 'READY' || test.status === 'ASSIGNED')) {
+        <div class="zone">
+          <div class="zone-title">
+            <div>
+              <h2>Invitations</h2>
+              <p class="zone-sub">{{ inviteableCount }} candidat(s) invitables</p>
+            </div>
+            <button
+              type="button"
+              class="r-btn"
+              [disabled]="busy || !selectedInviteCount"
+              (click)="assignSelected()"
+            >
+              Envoyer ({{ selectedInviteCount }})
+            </button>
+          </div>
+
+          @if (!candidatures.length) {
+            <div class="empty-panel">
+              <p>Aucune candidature sur cette offre.</p>
+              <a routerLink="/recruiter/candidatures" class="r-btn secondary">Voir les candidatures</a>
+            </div>
+          } @else {
+            <div class="tools">
+              <button type="button" class="text-btn" (click)="selectAllInviteable()" [disabled]="!inviteableCount">
+                Tout sélectionner
+              </button>
+              <button type="button" class="text-btn" (click)="clearInviteSelection()" [disabled]="!selectedInviteCount">
+                Effacer
+              </button>
+            </div>
+            <ul class="people">
+              @for (c of candidatures; track c.id) {
+                <li [class.off]="alreadyAssigned(c.id)">
+                  <label class="person-row">
+                    <input
+                      type="checkbox"
+                      [checked]="isSelected(c.id)"
+                      [disabled]="alreadyAssigned(c.id) || busy"
+                      (change)="toggleCand(c.id)"
+                    />
+                    <span class="name">{{ candidatureLabel(c) }}</span>
+                    <span class="sub">{{ labelCandStatus(c.status) }}</span>
+                  </label>
+                  @if (alreadyAssigned(c.id)) {
+                    <span class="pill" data-tone="ok">Invité</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+
+          <div class="zone-footer">
+            <button type="button" class="r-btn ghost" (click)="goPanel('test')">← Test</button>
+            <button type="button" class="r-btn ghost" (click)="goPanel('sessions')">Sessions →</button>
+          </div>
+        </div>
+      }
+
+      @if (activePanel === 'sessions') {
+        <div class="zone zone-last">
+          <div class="zone-title">
+            <div>
+              <h2>Suivi des tests</h2>
+              <p class="zone-sub">
+                Toutes vos offres ·
+                {{ invitedSessions.length }} invité(s) ·
+                {{ passedSessions.length }} test(s) passé(s) ·
+                {{ sessionsToPublishCount }} à publier
+              </p>
+            </div>
+            @if (sessionsToPublishCount > 0) {
+              <button
+                type="button"
+                class="r-btn secondary"
+                [disabled]="busy || busyAssignmentId != null || loadingSessions"
+                (click)="publishAllEvaluated()"
+              >
+                Publier tous les scores
+              </button>
+            }
+          </div>
+
+          @if (loadingSessions && !sessionRows.length) {
+            <p class="muted">Chargement du suivi…</p>
+          } @else if (!sessionRows.length) {
+            <div class="empty-panel">
+              <p>Aucune invitation pour le moment.</p>
+              <p class="muted">Invitez des candidats depuis l’étape Invitations (par offre).</p>
+              @if (test && (test.status === 'READY' || test.status === 'ASSIGNED')) {
+                <button type="button" class="r-btn" (click)="goPanel('invite')">Inviter des candidats</button>
+              }
+            </div>
+          } @else {
+            <section class="sess-block" aria-labelledby="invited-heading">
+              <div class="sess-block-head">
+                <h3 id="invited-heading">Candidats invités</h3>
+                <span class="sess-count">{{ invitedSessions.length }}</span>
+              </div>
+              @if (!invitedSessions.length) {
+                <p class="muted sess-empty">Aucun candidat en attente de passage.</p>
+              } @else {
+                <div class="table-wrap">
+                  <table class="sess-table">
+                    <thead>
+                      <tr>
+                        <th>Offre</th>
+                        <th>Candidat</th>
+                        <th>Statut</th>
+                        <th>Info</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of invitedSessions; track row.assignment.id) {
+                        <tr [attr.data-status]="row.assignment.status">
+                          <td class="offre-cell">{{ row.offreTitle }}</td>
+                          <td>
+                            <div class="who-cell">
+                              <span class="avatar" aria-hidden="true">{{ initials(assignmentLabel(row.assignment)) }}</span>
+                              <strong>{{ assignmentLabel(row.assignment) }}</strong>
+                            </div>
+                          </td>
+                          <td>
+                            <span class="pill" [attr.data-tone]="statusTone(row.assignment.status)">
+                              {{ labelStatus(row.assignment.status) }}
+                            </span>
+                          </td>
+                          <td class="info-cell">{{ sessionInfo(row.assignment) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </section>
+
+            <section class="sess-block" aria-labelledby="passed-heading">
+              <div class="sess-block-head">
+                <h3 id="passed-heading">Candidats ayant passé le test</h3>
+                <span class="sess-count">{{ passedSessions.length }}</span>
+              </div>
+              @if (!passedSessions.length) {
+                <p class="muted sess-empty">Aucun test rendu pour le moment.</p>
+              } @else {
+                <div class="table-wrap">
+                  <table class="sess-table">
+                    <thead>
+                      <tr>
+                        <th>Offre</th>
+                        <th>Candidat</th>
+                        <th>Statut</th>
+                        <th>Score</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of passedSessions; track row.assignment.id) {
+                        <tr [attr.data-status]="row.assignment.status">
+                          <td class="offre-cell">{{ row.offreTitle }}</td>
+                          <td>
+                            <div class="who-cell">
+                              <span class="avatar" aria-hidden="true">{{ initials(assignmentLabel(row.assignment)) }}</span>
+                              <strong>{{ assignmentLabel(row.assignment) }}</strong>
+                            </div>
+                          </td>
+                          <td>
+                            <span class="pill" [attr.data-tone]="statusTone(row.assignment.status)">
+                              {{ labelStatus(row.assignment.status) }}
+                            </span>
+                          </td>
+                          <td class="score-cell">
+                            @if (row.assignment.scoreTotal != null) {
+                              <b>{{ row.assignment.scoreTotal | number: '1.0-0' }}</b><span>/100</span>
+                            } @else {
+                              —
+                            }
+                          </td>
+                          <td class="action-cell">
+                            <div class="row-actions">
+                              @if (canCalculate(row.assignment)) {
+                                <button
+                                  type="button"
+                                  class="r-btn"
+                                  [disabled]="busyAssignmentId != null"
+                                  [attr.aria-busy]="rowBusy(row.assignment)"
+                                  (click)="evaluateOne(row)"
+                                >
+                                  {{ rowBusy(row.assignment) ? 'Calcul…' : 'Calculer' }}
+                                </button>
+                              }
+                              @if (canPublish(row.assignment)) {
+                                <button
+                                  type="button"
+                                  class="r-btn"
+                                  [disabled]="busyAssignmentId != null"
+                                  [attr.aria-busy]="rowBusy(row.assignment)"
+                                  (click)="publishOne(row)"
+                                >
+                                  {{ rowBusy(row.assignment) ? 'Publication…' : 'Publier' }}
+                                </button>
+                              }
+                              @if (canOpenCorrection(row.assignment)) {
+                                <button type="button" class="act ghost" (click)="openCorrection(row.assignment)">Détail</button>
+                              }
+                              <a
+                                class="act ghost"
+                                [routerLink]="['/recruiter/candidatures', row.assignment.candidatureId, 'dossier']"
+                              >Profil</a>
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </section>
+
+            @if (expiredSessions.length) {
+              <section class="sess-block" aria-labelledby="expired-heading">
+                <div class="sess-block-head">
+                  <h3 id="expired-heading">Invitations expirées</h3>
+                  <span class="sess-count">{{ expiredSessions.length }}</span>
+                </div>
+                <div class="table-wrap">
+                  <table class="sess-table">
+                    <thead>
+                      <tr>
+                        <th>Offre</th>
+                        <th>Candidat</th>
+                        <th>Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of expiredSessions; track row.assignment.id) {
+                        <tr [attr.data-status]="row.assignment.status">
+                          <td class="offre-cell">{{ row.offreTitle }}</td>
+                          <td>
+                            <div class="who-cell">
+                              <span class="avatar" aria-hidden="true">{{ initials(assignmentLabel(row.assignment)) }}</span>
+                              <strong>{{ assignmentLabel(row.assignment) }}</strong>
+                            </div>
+                          </td>
+                          <td>
+                            <span class="pill" [attr.data-tone]="statusTone(row.assignment.status)">
+                              {{ labelStatus(row.assignment.status) }}
+                            </span>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            }
+          }
+
+          <div class="zone-footer">
+            <button type="button" class="r-btn ghost" (click)="goPanel('invite')" [disabled]="!(test && (test.status === 'READY' || test.status === 'ASSIGNED'))">
+              ← Invitations
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  @if (correctionOpen) {
+    <div class="drawer-backdrop" (click)="closeCorrection()"></div>
+    <aside class="drawer" role="dialog" aria-label="Correction">
+      <header>
+        <h3>{{ correctionLabel }}</h3>
+        <button type="button" class="icon-x" aria-label="Fermer" (click)="closeCorrection()">×</button>
+      </header>
+      @if (correctionLoading) {
+        <p class="muted">Chargement…</p>
+      } @else if (correction) {
+        <p class="meta-line">
+          Total
+          <b>
+            {{
+              correction.assignment.scoreTotal != null
+                ? (correction.assignment.scoreTotal | number: '1.0-0')
+                : '—'
+            }}
+          </b>
+        </p>
+        <ul class="answers">
+          @for (ans of correction.answers; track ans.questionId) {
+            <li>
+              <div class="a-head">
+                <b>Q{{ ans.position }}</b>
+                <em>{{ ans.score != null ? ans.score : '—' }}/{{ ans.maxScore }}</em>
+              </div>
+              <p>{{ ans.prompt }}</p>
+              @if (ans.type === 'MCQ') {
+                <p class="ans">Réponse : {{ ans.answerOption || '—' }}</p>
+              } @else {
+                <p class="ans">{{ ans.answerText || '—' }}</p>
+              }
+              @if (ans.feedback) {
+                <p class="fb">{{ ans.feedback }}</p>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </aside>
+  }
+</section>

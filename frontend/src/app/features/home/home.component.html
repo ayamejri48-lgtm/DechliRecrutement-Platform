@@ -1,0 +1,65 @@
+<div class="site" id="top">
+  <header class="header container">
+    <a routerLink="/" class="brand" aria-label="DechliRecrutement, accueil">
+      <img src="assets/dechli-logo.png" alt="DechliRecrutement">
+    </a>
+    <nav class="desktop-nav" aria-label="Navigation principale">
+      <a routerLink="/candidate/offres">Offres d'emploi</a>
+      <a href="#entreprises">Entreprises</a>
+      <a href="#apropos">À propos</a>
+    </nav>
+    <div class="header-actions">
+      <a routerLink="/login" class="login-link">Se connecter</a>
+      <a routerLink="/signup" class="signup-pill">S'inscrire</a>
+    </div>
+    <button class="menu-toggle" type="button" aria-controls="mobile-navigation"
+      [attr.aria-expanded]="menuOpen()" [attr.aria-label]="menuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
+      (click)="toggleMenu()">{{ menuOpen() ? '✕' : '☰' }}</button>
+  </header>
+
+  <nav id="mobile-navigation" class="mobile-nav container" [class.is-open]="menuOpen()" aria-label="Navigation mobile">
+    <a routerLink="/candidate/offres" (click)="closeMenu()">Offres d'emploi</a>
+    <a href="#entreprises" (click)="closeMenu()">Entreprises</a>
+    <a href="#apropos" (click)="closeMenu()">À propos</a>
+    <a routerLink="/login" (click)="closeMenu()">Se connecter</a>
+    <a routerLink="/signup" (click)="closeMenu()">S'inscrire</a>
+  </nav>
+
+  <main>
+    <section class="hero container" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">Le bon talent<br>au <em>bon endroit</em></h1>
+        <p>Une plateforme intelligente qui connecte les talents aux opportunités, en alliant la puissance de l'IA à l'expertise humaine.</p>
+        <div class="hero-actions">
+          <a class="hero-btn hire-btn" routerLink="/login">Recruter un talent <span aria-hidden="true">→</span></a>
+          <a class="hero-btn find-btn" routerLink="/candidate/offres">Trouver un emploi <span aria-hidden="true">⌕</span></a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <img class="hero-photo" src="assets/recruitment-hero.png"
+          alt="Professionnelle travaillant sur son ordinateur dans un bureau lumineux" fetchpriority="high">
+        <div class="annotation" aria-hidden="true">
+          <span>Des opportunités<br>qui vous ressemblent</span>
+          <svg viewBox="0 0 120 85" fill="none"><path d="M6 8 C 35 9, 39 55, 90 60 M 75 48 L 91 61 L 73 69" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <section class="info-section container" aria-label="Notre approche du recrutement">
+      <div id="entreprises" class="info-enterprise">
+        <span class="eyebrow">POUR LES ENTREPRISES</span>
+        <h2>Recrutez avec plus de clarté.</h2>
+        <p>Publiez vos offres et gérez vos candidatures dans un espace dédié.</p>
+      </div>
+      <div id="apropos" class="info-about">
+        <span class="eyebrow">À PROPOS</span>
+        <h2>Le recrutement, plus humain.</h2>
+        <p>Une technologie intelligente au service des candidats et des recruteurs.</p>
+      </div>
+    </section>
+  </main>
+  <footer class="footer container">
+    <span>© 2026 DechliRecrutement</span>
+    <span>Une plateforme de recrutement intelligente</span>
+  </footer>
+</div>

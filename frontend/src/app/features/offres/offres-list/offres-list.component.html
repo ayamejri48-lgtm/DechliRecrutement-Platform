@@ -1,0 +1,311 @@
+<section class="jobs-page">
+
+  <div class="jobs-intro" *ngIf="role === 'RECRUITER'">
+    <a routerLink="/recruiter/offre/new" class="primary-btn create-btn">
+      + Publier une offre
+    </a>
+  </div>
+
+  <div class="jobs-search-block">
+    <form class="search-bar" (ngSubmit)="searchOffers()">
+      <span class="search-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </span>
+      <input
+        name="jobSearch"
+        [(ngModel)]="search"
+        placeholder="Intitulé du poste, compétence, mot-clé…"
+        aria-label="Rechercher une offre">
+      <button type="submit" class="search-submit" [disabled]="loading">
+        {{ loading ? '…' : 'Rechercher' }}
+      </button>
+    </form>
+
+    <div class="filter-toolbar">
+      <button
+        type="button"
+        class="filter-toggle"
+        (click)="filtersOpen = !filtersOpen"
+        [attr.aria-expanded]="filtersOpen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7L4 5z"/></svg>
+        Affiner
+      </button>
+
+      <div class="filter-chips" *ngIf="filtersOpen">
+        <label class="chip-select chip-city">
+          <span class="chip-head">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.3 7-11a7 7 0 1 0-14 0c0 5.7 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            Ville
+          </span>
+          <input
+            name="jobLocation"
+            list="job-city-suggestions"
+            [(ngModel)]="location"
+            (change)="applyFilters()"
+            (blur)="applyFilters()"
+            (keydown.enter)="$event.preventDefault(); applyFilters()"
+            placeholder="Toutes / saisir…"
+            aria-label="Filtrer par ville"
+            autocomplete="off">
+          <datalist id="job-city-suggestions">
+            <option *ngFor="let v of locations" [value]="v"></option>
+          </datalist>
+        </label>
+
+        <label class="chip-select">
+          <span class="chip-head">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Contrat
+          </span>
+          <select
+            [(ngModel)]="contractType"
+            (ngModelChange)="applyFilters()"
+            aria-label="Filtrer par contrat">
+            <option value="">Tous</option>
+            <option *ngFor="let v of contracts" [value]="v">
+              {{ labelContract(v) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="chip-select">
+          <span class="chip-head">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8M12 18v2"/></svg>
+            Mode
+          </span>
+          <select
+            [(ngModel)]="workMode"
+            (ngModelChange)="applyFilters()"
+            aria-label="Filtrer par mode de travail">
+            <option value="">Tous</option>
+            <option *ngFor="let v of workModes" [value]="v">
+              {{ labelWorkMode(v) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="chip-select">
+          <span class="chip-head">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2z"/></svg>
+            Expérience
+          </span>
+          <select
+            [(ngModel)]="experience"
+            (ngModelChange)="applyFilters()"
+            aria-label="Filtrer par expérience">
+            <option value="">Toutes</option>
+            <option value="0">Débutant</option>
+            <option value="1">≤ 1 an</option>
+            <option value="2">≤ 2 ans</option>
+            <option value="3">≤ 3 ans</option>
+            <option value="5">≤ 5 ans</option>
+            <option value="10">≤ 10 ans</option>
+          </select>
+        </label>
+
+        <label class="chip-select">
+          <span class="chip-head">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M7 16V9l5-4 5 4v7"/></svg>
+            Études
+          </span>
+          <select
+            [(ngModel)]="educationLevel"
+            (ngModelChange)="applyFilters()"
+            aria-label="Filtrer par études">
+            <option value="">Tous</option>
+            <option *ngFor="let v of educationLevels" [value]="v">
+              {{ v }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <button type="button" class="reset" (click)="resetFilters()">
+        Effacer
+      </button>
+    </div>
+  </div>
+
+  <div class="results-toolbar">
+    <strong>
+      {{ totalElements }}
+      offre{{ totalElements > 1 ? 's' : '' }}
+    </strong>
+
+    <div class="results-controls">
+      <label for="job-sort">Trier par</label>
+      <select
+        id="job-sort"
+        [(ngModel)]="sort"
+        (ngModelChange)="changeSort()">
+        <option value="recent">Plus récentes</option>
+        <option value="oldest">Plus anciennes</option>
+        <option value="title">Titre A–Z</option>
+      </select>
+
+      <div class="view-toggle" role="group" aria-label="Mode d’affichage">
+        <button
+          type="button"
+          class="view-btn"
+          [class.selected]="view === 'list'"
+          (click)="view = 'list'"
+          aria-label="Vue liste"
+          title="Vue liste">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        </button>
+        <button
+          type="button"
+          class="view-btn"
+          [class.selected]="view === 'grid'"
+          (click)="view = 'grid'"
+          aria-label="Vue grille"
+          title="Vue grille">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <p *ngIf="loading" class="jobs-status" role="status" aria-live="polite">
+    Chargement des offres…
+  </p>
+
+  <div *ngIf="error && !loading" class="empty-results" role="alert">
+    <p>{{ error }}</p>
+    <button type="button" class="outline-btn" (click)="loadOffers()">
+      Réessayer
+    </button>
+  </div>
+
+  <div class="job-list" [class.grid-view]="view === 'grid'" *ngIf="!loading && !error">
+    <article
+      class="job-card"
+      *ngFor="let o of results"
+      [class.applied]="role === 'CANDIDATE' && hasApplied(o.id)"
+      [class.deadline-soon]="isDeadlineSoon(o) && !(role === 'CANDIDATE' && hasApplied(o.id))">
+      <div class="job-mark" aria-hidden="true">
+        {{ o.title ? o.title.charAt(0) : 'O' }}
+      </div>
+
+      <div class="job-main">
+        <div class="job-title-row">
+          <h2>{{ o.title }}</h2>
+          <span
+            class="applied-badge"
+            *ngIf="role === 'CANDIDATE' && hasApplied(o.id)">
+            Déjà postulé
+          </span>
+          <span
+            class="deadline-badge"
+            *ngIf="isDeadlineSoon(o) && !(role === 'CANDIDATE' && hasApplied(o.id))">
+            {{ deadlineLabel(o) }}
+          </span>
+        </div>
+
+        <div class="job-meta">
+          <span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.3 7-11a7 7 0 1 0-14 0c0 5.7 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            {{ o.location }}
+          </span>
+          <span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            {{ labelContract(o.contractType) }}
+          </span>
+          <span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8M12 18v2"/></svg>
+            {{ labelWorkMode(o.workMode) }}
+          </span>
+        </div>
+
+        <p class="job-description">{{ o.description }}</p>
+
+        <div class="job-tags">
+          <span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2z"/></svg>
+            {{ o.experienceYears }} an(s)
+          </span>
+          <span *ngIf="o.educationLevel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M7 16V9l5-4 5 4v7"/></svg>
+            {{ o.educationLevel }}
+          </span>
+        </div>
+      </div>
+
+      <div class="job-side">
+        <span
+          class="status"
+          *ngIf="role !== 'CANDIDATE'"
+          [class.draft]="o.status === 'DRAFT'"
+          [class.closed]="o.status === 'CLOSED'">
+          {{ labelStatus(o.status) }}
+        </span>
+
+        <div class="job-actions">
+          <a class="primary-btn" [routerLink]="['/offres', o.id]">
+            Voir l’offre
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+
+          <ng-container *ngIf="role === 'RECRUITER'">
+            <a class="outline-btn"
+               [routerLink]="['/recruiter/offre', o.id, 'edit']">
+              Modifier
+            </a>
+            <button
+              type="button"
+              class="outline-btn"
+              *ngIf="o.status === 'DRAFT'"
+              (click)="offreAction.emit({id: o.id, kind: 'publish'})">
+              Publier
+            </button>
+            <button
+              type="button"
+              class="outline-btn"
+              *ngIf="o.status === 'PUBLISHED'"
+              (click)="offreAction.emit({id: o.id, kind: 'close'})">
+              Clôturer
+            </button>
+          </ng-container>
+        </div>
+      </div>
+    </article>
+
+    <div class="empty-results" *ngIf="!results.length">
+      <strong>Aucune offre ne correspond à votre recherche.</strong>
+      <p>Essayez d’autres filtres ou élargissez votre recherche.</p>
+    </div>
+
+    <nav
+      *ngIf="totalPages > 1"
+      class="pagination"
+      aria-label="Pagination des offres">
+      <button
+        type="button"
+        class="page-btn"
+        [disabled]="page === 0"
+        (click)="previousPage()"
+        aria-label="Page précédente">
+        ‹
+      </button>
+      <button
+        type="button"
+        class="page-num"
+        *ngFor="let i of pageIndexes"
+        [class.active]="page === i"
+        (click)="goToPage(i)"
+        [attr.aria-current]="page === i ? 'page' : null"
+        [attr.aria-label]="'Page ' + (i + 1)">
+        {{ i + 1 }}
+      </button>
+      <button
+        type="button"
+        class="page-btn"
+        [disabled]="page + 1 >= totalPages"
+        (click)="nextPage()"
+        aria-label="Page suivante">
+        ›
+      </button>
+    </nav>
+  </div>
+
+</section>

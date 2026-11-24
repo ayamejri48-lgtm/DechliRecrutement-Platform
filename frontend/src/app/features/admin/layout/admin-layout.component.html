@@ -1,0 +1,124 @@
+<div class="shell">
+  <aside class="sidebar" aria-label="Navigation administrateur">
+    <div class="brand">
+      <div class="logo">
+        <img src="/assets/dechli-logo.png" alt="Dechli Recrutement" />
+      </div>
+    </div>
+
+    <nav>
+      @for (group of groups; track group.label) {
+        <p class="group">{{ group.label }}</p>
+        @for (item of group.items; track item.path) {
+          <a [routerLink]="item.path" routerLinkActive="active">
+            <span class="nav-symbol" aria-hidden="true">
+              @switch (item.icon) {
+                @case ('dashboard') {
+                  <svg viewBox="0 0 24 24"><path d="M4 13h7V4H4v9zm9 7h7V4h-7v16zM4 20h7v-5H4v5z"/></svg>
+                }
+                @case ('users') {
+                  <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 19c1.2-3 3.4-4.5 6-4.5S13.8 16 15 19"/><circle cx="17" cy="9" r="2.2"/><path d="M16 14.5c1.6.2 2.8 1.2 3.5 2.8"/></svg>
+                }
+                @case ('recruiters') {
+                  <svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7"/></svg>
+                }
+                @case ('offres') {
+                  <svg viewBox="0 0 24 24"><path d="M6 4h9l3 3v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M14 4v4h4M8 13h8M8 17h5"/></svg>
+                }
+                @case ('candidatures') {
+                  <svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h8"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+                }
+                @case ('tests') {
+                  <svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg>
+                }
+                @case ('journal') {
+                  <svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="8"/></svg>
+                }
+              }
+            </span>
+            {{ item.label }}
+          </a>
+        }
+      }
+    </nav>
+
+    <div class="side-foot">
+      <a class="profile-link" routerLink="/admin/profile" routerLinkActive="active">
+        <span class="mini" aria-hidden="true">
+          @if (avatarUrl() && !avatarBroken) {
+            <img [src]="avatarUrl()" alt="" (error)="onAvatarError()" />
+          } @else {
+            {{ initials }}
+          }
+        </span>
+        <span>
+          <strong>{{ displayName }}</strong>
+          <small>Profil</small>
+        </span>
+      </a>
+      <button type="button" class="logout" (click)="logout()" [disabled]="loggingOut">
+        Déconnexion
+      </button>
+    </div>
+  </aside>
+
+  <div class="content">
+    <header class="top">
+      <p class="crumb">
+        <span>{{ crumb.group }}</span>
+        <em>/</em>
+        {{ crumb.label }}
+      </p>
+
+      <div class="header-actions">
+        <div class="bell-wrap" (click)="$event.stopPropagation()">
+          <button
+            type="button"
+            class="bell"
+            (click)="toggleNotif($event)"
+            [attr.aria-expanded]="notifOpen"
+            aria-label="Notifications"
+          >
+            <svg class="bell-svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9a6 6 0 0 1 12 0c0 7 2 7 2 7H4s2 0 2-7"/>
+              <path d="M10 19a2 2 0 0 0 4 0"/>
+            </svg>
+            @if (notifAvailable && unread > 0) {
+              <span class="badge">{{ unread > 99 ? '99+' : unread }}</span>
+            }
+          </button>
+
+          @if (notifOpen) {
+            <div class="notif-panel" role="dialog" aria-label="Liste des notifications">
+              <p class="notif-title">Notifications</p>
+              @if (notifError) {
+                <p class="notif-empty">{{ notifError }}</p>
+              } @else if (notifLoading) {
+                <p class="notif-empty">Chargement…</p>
+              } @else if (!notifications.length) {
+                <p class="notif-empty">Aucune notification pour le moment.</p>
+              } @else {
+                @for (n of notifications; track n.id) {
+                  <button
+                    type="button"
+                    class="notif-item"
+                    [class.unread]="!n.read"
+                    (click)="markRead(n, $event)"
+                  >
+                    <strong>{{ n.title }}</strong>
+                    <span>{{ notifText(n) }}</span>
+                    <small>{{ n.createdAt | date: 'short' }}</small>
+                  </button>
+                }
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </header>
+
+    <div class="stage">
+      <router-outlet />
+    </div>
+  </div>
+</div>

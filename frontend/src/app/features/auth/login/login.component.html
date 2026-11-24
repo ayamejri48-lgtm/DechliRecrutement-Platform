@@ -1,0 +1,87 @@
+<div class="page">
+  <aside class="showcase">
+    <img
+      class="showcase-photo"
+      src="assets/recruitment-hero.png"
+      alt=""
+      aria-hidden="true">
+    <div class="showcase-veil"></div>
+
+    <div class="showcase-inner">
+      <a routerLink="/" class="brand" aria-label="DechliRecrutement, accueil">
+        <img src="assets/dechli-logo.png" alt="DechliRecrutement">
+      </a>
+
+      <div class="showcase-copy">
+        <h1>Le bon talent,&nbsp;au bon&nbsp;endroit.</h1>
+        <p>
+          Une plateforme claire pour découvrir des offres,
+          postuler et suivre vos candidatures en toute confiance.
+        </p>
+      </div>
+
+      <p class="showcase-foot">DechliRecrutement</p>
+    </div>
+  </aside>
+
+  <main class="form-panel">
+    <div class="form-stage">
+      <a routerLink="/" class="mobile-brand" aria-label="DechliRecrutement, accueil">
+        <img src="assets/dechli-logo.png" alt="DechliRecrutement">
+      </a>
+
+      <header class="form-header">
+        <h2>Content de vous&nbsp;revoir</h2>
+        <p>Reprenez votre recherche d’emploi ou le suivi de vos candidatures.</p>
+      </header>
+
+      <div *ngIf="error()" class="alert error" role="alert">{{ error() }}</div>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <label class="field">
+          <span class="field-label">Adresse e-mail</span>
+          <input
+            type="email"
+            formControlName="email"
+            autocomplete="username"
+            placeholder="vous@exemple.com">
+          <small *ngIf="invalid('email')">Saisissez une adresse e-mail valide.</small>
+        </label>
+
+        <label class="field">
+          <div class="field-label-row">
+            <span class="field-label">Mot de passe</span>
+            <a routerLink="/forgot-password" class="forgot">Oublié&nbsp;?</a>
+          </div>
+          <div class="password">
+            <input
+              [type]="showPassword() ? 'text' : 'password'"
+              formControlName="password"
+              autocomplete="current-password"
+              placeholder="Votre mot de passe">
+            <button
+              class="toggle"
+              type="button"
+              (click)="showPassword.set(!showPassword())"
+              [attr.aria-pressed]="showPassword()"
+              [attr.aria-label]="showPassword() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'">
+              {{ showPassword() ? 'Masquer' : 'Afficher' }}
+            </button>
+          </div>
+          <small *ngIf="invalid('password')">Le mot de passe est obligatoire.</small>
+        </label>
+
+        <button class="submit" type="submit" [disabled]="loading()">
+          {{ loading() ? 'Connexion…' : 'Se connecter' }}
+        </button>
+      </form>
+
+      <p class="switch">
+        Nouveau sur Dechli&nbsp;?
+        <a routerLink="/signup">Créer un compte</a>
+      </p>
+
+      <p class="trust">Connexion sécurisée · Vos données restent privées</p>
+    </div>
+  </main>
+</div>

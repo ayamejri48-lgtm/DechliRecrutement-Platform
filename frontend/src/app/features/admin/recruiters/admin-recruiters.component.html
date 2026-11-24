@@ -1,0 +1,186 @@
+<section class="r-page">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Comptes</p>
+      <h1>Recruteurs</h1>
+    </div>
+    <button type="button" class="r-btn" (click)="openCreate()">Créer un recruteur</button>
+  </header>
+
+
+
+  @if (showCreate) {
+    <section class="r-panel">
+      <h3>Nouveau recruteur</h3>
+      @if (error) {
+        <p class="form-error" role="alert">{{ error }}</p>
+      }
+      <form class="r-form create-form" [formGroup]="createForm" (ngSubmit)="create()" novalidate>
+        <div class="r-two">
+          <label class="field">
+            <span class="field-label">Prénom</span>
+            <input formControlName="firstName" placeholder="Ex. Amine" autocomplete="given-name" />
+            @if (invalid('firstName')) {
+              <small>Prénom obligatoire.</small>
+            }
+          </label>
+          <label class="field">
+            <span class="field-label">Nom</span>
+            <input formControlName="lastName" placeholder="Ex. Ben Ali" autocomplete="family-name" />
+            @if (invalid('lastName')) {
+              <small>Nom obligatoire.</small>
+            }
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Adresse e-mail</span>
+          <input type="email" formControlName="email" placeholder="vous@exemple.com" autocomplete="email" />
+          @if (invalid('email')) {
+            <small>Saisissez une adresse e-mail valide.</small>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field-label">Téléphone</span>
+          <input type="tel" formControlName="phone" placeholder="+216 XX XXX XXX" autocomplete="tel" />
+          @if (invalid('phone')) {
+            <small>Le téléphone est obligatoire.</small>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field-label">Mot de passe</span>
+          <div class="password">
+            <input
+              [type]="showPassword() ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="8 caractères minimum"
+              autocomplete="new-password"
+            />
+            <button
+              class="toggle"
+              type="button"
+              (click)="showPassword.set(!showPassword())"
+              [attr.aria-pressed]="showPassword()"
+              [attr.aria-label]="showPassword() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+            >
+              {{ showPassword() ? 'Masquer' : 'Afficher' }}
+            </button>
+          </div>
+          @if (invalid('password')) {
+            <small>
+              8 caractères min., majuscule, minuscule, chiffre et caractère spécial (@$!%*?&amp;._-).
+            </small>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field-label">Confirmer le mot de passe</span>
+          <input
+            type="password"
+            formControlName="confirmPassword"
+            placeholder="Confirmez le mot de passe"
+            autocomplete="new-password"
+          />
+          @if (createForm.hasError('passwordMismatch') && createForm.get('confirmPassword')?.touched) {
+            <small>Les mots de passe ne correspondent pas.</small>
+          }
+        </label>
+
+        <div class="r-actions">
+          <button type="submit" class="r-btn" [disabled]="creating">
+            {{ creating ? 'Création…' : 'Créer' }}
+          </button>
+          <button type="button" class="r-btn secondary" (click)="showCreate = false">Annuler</button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <div class="filters">
+    <label class="grow">Recherche<input [(ngModel)]="q" name="q" placeholder="Nom ou email" (ngModelChange)="page = 1" /></label>
+    <button type="button" class="r-btn ghost" (click)="toggleDir()">{{ sortDir === 'asc' ? 'A ? Z' : 'Z ? A' }}</button>
+  </div>
+
+  @if (pending) {
+    <div class="confirm-box" role="dialog" aria-modal="true">
+      <strong>{{ pending.title }}</strong>
+      <p>{{ pending.message }}</p>
+      <div class="r-actions">
+        <button
+          type="button"
+          class="r-btn"
+          [class.danger]="pending.kind === 'del' || pending.kind === 'off'"
+          (click)="confirmPending()"
+        >
+          {{ pending.confirmLabel }}
+        </button>
+        <button type="button" class="r-btn secondary" (click)="cancelPending()">Annuler</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <p class="r-empty">Chargement…</p>
+  } @else if (!filtered.length) {
+    <p class="r-empty">Aucun recruteur.</p>
+  } @else {
+    <section class="sheet">
+      <div class="pager">
+        <span>{{ view.total }} recruteur(s) · {{ view.page }}/{{ view.pages }}</span>
+        <button type="button" class="r-btn ghost" [disabled]="view.page <= 1" (click)="page = view.page - 1">Précédent</button>
+        <button type="button" class="r-btn ghost" [disabled]="view.page >= view.pages" (click)="page = view.page + 1">Suivant</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Recruteur</th>
+              <th class="num">Offres publiées</th>
+              <th class="num">Candidatures</th>
+              <th class="num">Tests</th>
+              <th>État</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of view.rows; track u.id) {
+              <tr>
+                <td>
+                  <div class="who">
+                    <strong>{{ u.firstName }} {{ u.lastName }}</strong>
+                    <small>{{ u.email }}{{ u.phone ? ' · ' + u.phone : '' }}</small>
+                  </div>
+                </td>
+                <td class="num">{{ figure(u.id, 'published') }}</td>
+                <td class="num">{{ figure(u.id, 'applications') }}</td>
+                <td class="num">{{ figure(u.id, 'tests') }}</td>
+                <td>
+                  <span class="r-chip" [class.rejected]="u.enabled === false" [class.accepted]="u.enabled !== false">
+                    {{ u.enabled === false ? 'Désactivé' : 'Actif' }}
+                  </span>
+                </td>
+                <td class="end">
+                  <div class="row-actions">
+                    <a class="r-btn ghost" [routerLink]="['/admin/recruiters', u.id]">Profil</a>
+                    @if (u.enabled !== false) {
+                      <button type="button" class="r-btn ghost" [disabled]="busyId === u.id" (click)="deactivate(u)">
+                        {{ busyId === u.id ? '…' : 'Désactiver' }}
+                      </button>
+                    } @else {
+                      <button type="button" class="r-btn ghost" [disabled]="busyId === u.id" (click)="reactivate(u)">
+                        {{ busyId === u.id ? '…' : 'Réactiver' }}
+                      </button>
+                    }
+                    <button type="button" class="r-btn danger" [disabled]="busyId === u.id" (click)="remove(u)">Supprimer</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</section>

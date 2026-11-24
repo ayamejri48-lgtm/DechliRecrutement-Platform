@@ -1,0 +1,118 @@
+<div class="shell">
+  <aside class="sidebar" aria-label="Navigation recruteur">
+    <div class="brand">
+      <div class="logo">
+        <img src="/assets/dechli-logo.png" alt="Dechli Recrutement" />
+      </div>
+    </div>
+
+    <nav>
+      @for (group of groups; track group.label) {
+        <p class="group">{{ group.label }}</p>
+        @for (item of group.items; track item.path) {
+          <a [routerLink]="item.path" routerLinkActive="active">
+            <span class="nav-symbol" aria-hidden="true">
+              @switch (item.icon) {
+                @case ('dashboard') {
+                  <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+                }
+                @case ('offres') {
+                  <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+                }
+                @case ('candidatures') {
+                  <svg viewBox="0 0 24 24"><path d="M8 7h8M8 12h8M8 17h5"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                }
+                @case ('matching') {
+                  <svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.5"/><circle cx="15" cy="15" r="3.5"/><path d="M12 10.5 11.5 13.5"/></svg>
+                }
+                @case ('evaluations') {
+                  <svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                }
+              }
+            </span>
+            {{ item.label }}
+          </a>
+        }
+      }
+    </nav>
+
+    <div class="side-foot">
+      <a class="profile-link" routerLink="/recruiter/profile" routerLinkActive="active">
+        <span class="mini" aria-hidden="true">
+          @if (avatarUrl() && !avatarBroken) {
+            <img [src]="avatarUrl()" alt="" (error)="onAvatarError()" />
+          } @else {
+            {{ initials }}
+          }
+        </span>
+        <span>
+          <strong>{{ displayName }}</strong>
+          <small>Profil</small>
+        </span>
+      </a>
+      <button type="button" class="logout" (click)="logout()" [disabled]="loggingOut">
+        Déconnexion
+      </button>
+    </div>
+  </aside>
+
+  <div class="content">
+    <header class="top">
+      <p class="crumb">
+        <span>{{ crumb.group }}</span>
+        <em>/</em>
+        {{ crumb.label }}
+      </p>
+
+      <div class="header-actions">
+        <div class="bell-wrap" (click)="$event.stopPropagation()">
+          <button
+            type="button"
+            class="bell"
+            (click)="toggleNotif($event)"
+            [attr.aria-expanded]="notifOpen"
+            aria-label="Notifications"
+          >
+            <svg class="bell-svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9a6 6 0 0 1 12 0c0 7 2 7 2 7H4s2 0 2-7"/>
+              <path d="M10 19a2 2 0 0 0 4 0"/>
+            </svg>
+            @if (notifAvailable && !notifOpen && unread > 0) {
+              <span class="badge">{{ unread > 99 ? '99+' : unread }}</span>
+            }
+          </button>
+
+          @if (notifOpen) {
+            <div class="notif-panel" role="dialog" aria-label="Liste des notifications">
+              <p class="notif-title">Notifications</p>
+              @if (notifError) {
+                <p class="notif-empty">{{ notifError }}</p>
+              } @else if (notifLoading) {
+                <p class="notif-empty">Chargement…</p>
+              } @else if (!notifications.length) {
+                <p class="notif-empty">Aucune notification pour le moment.</p>
+              } @else {
+                @for (n of notifications; track n.id) {
+                  <button
+                    type="button"
+                    class="notif-item"
+                    [class.unread]="!n.read"
+                    (click)="openNotification(n)"
+                  >
+                    <strong>{{ n.title }}</strong>
+                    <span>{{ n.message }}</span>
+                    <small>{{ n.createdAt | date: 'short' }}</small>
+                  </button>
+                }
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </header>
+
+    <div class="stage">
+      <router-outlet />
+    </div>
+  </div>
+</div>

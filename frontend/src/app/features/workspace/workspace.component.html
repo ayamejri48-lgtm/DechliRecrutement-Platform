@@ -1,0 +1,950 @@
+
+<div class="shell">
+  <aside class="sidebar" aria-label="Navigation candidat">
+    <div class="brand">
+      <div class="logo">
+        <img src="assets/dechli-logo.png" alt="Dechli Recrutement">
+      </div>
+    </div>
+
+    <nav>
+      <ng-container *ngIf="role==='CANDIDATE'; else legacyNav">
+        <p class="group">Pilotage</p>
+        <a routerLink="/candidate/dashboard" routerLinkActive="active">
+          <span class="nav-symbol" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          </span>
+          Dashboard
+        </a>
+
+        <p class="group">Candidature</p>
+        <a routerLink="/candidate/offres" routerLinkActive="active">
+          <span class="nav-symbol" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+          </span>
+          Offres d’emploi
+        </a>
+        <a routerLink="/candidate/candidatures" routerLinkActive="active">
+          <span class="nav-symbol" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M8 7h8M8 12h8M8 17h5"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          </span>
+          Mes candidatures
+        </a>
+        <a routerLink="/candidate/tests" routerLinkActive="active">
+          <span class="nav-symbol" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          </span>
+          Tests techniques
+        </a>
+        <a routerLink="/candidate/cv" routerLinkActive="active">
+          <span class="nav-symbol" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M6 4h9l3 3v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M14 4v4h4M8 13h8M8 17h5"/></svg>
+          </span>
+          Mon CV
+        </a>
+      </ng-container>
+
+      <ng-template #legacyNav>
+        <p class="group">Menu</p>
+        <a *ngFor="let n of nav()" [routerLink]="n.path" routerLinkActive="active">
+          <span class="nav-symbol" aria-hidden="true"><span class="nav-emoji">{{n.icon}}</span></span>
+          {{ n.label }}
+        </a>
+      </ng-template>
+    </nav>
+
+    <div class="side-foot">
+      <a
+        class="profile-link"
+        routerLink="/candidate/profile"
+        routerLinkActive="active"
+        *ngIf="role==='CANDIDATE' && me() as u">
+        <span class="mini" aria-hidden="true">
+          <img *ngIf="pictureUrl && !photoBroken" [src]="pictureUrl" alt="" (error)="photoBroken=true">
+          <ng-container *ngIf="!pictureUrl || photoBroken">{{ initials(u) }}</ng-container>
+        </span>
+        <span>
+          <strong>{{ u.firstName || 'Candidat' }} {{ u.lastName || '' }}</strong>
+          <small>Profil</small>
+        </span>
+      </a>
+      <a
+        class="profile-link"
+        routerLink="/candidate/profile"
+        routerLinkActive="active"
+        *ngIf="role==='CANDIDATE' && !me()">
+        <span class="mini" aria-hidden="true">C</span>
+        <span>
+          <strong>Candidat</strong>
+          <small>Profil</small>
+        </span>
+      </a>
+      <button type="button" class="logout" (click)="signout()">Déconnexion</button>
+    </div>
+  </aside>
+
+  <main class="content" [class.profile-content]="section==='profile'" [class.tests-content]="section==='tests'" [class.cv-content]="section==='cv'">
+    <header class="top" *ngIf="section!=='profile'" [class.top-offres]="section==='offres' || section==='applications' || section==='cv' || section==='dashboard' || section==='tests'">
+      <div>
+        <small>DechliRecrutement / <strong>{{role==='CANDIDATE'?'Candidat':section}}</strong><ng-container *ngIf="section==='dashboard'"> / <strong>Tableau de bord</strong></ng-container><ng-container *ngIf="section==='offres'"> / <strong>Offres d’emploi</strong></ng-container><ng-container *ngIf="section==='applications'"> / <strong>Mes candidatures</strong></ng-container><ng-container *ngIf="section==='tests'"> / <strong>Tests techniques</strong></ng-container><ng-container *ngIf="section==='cv'"> / <strong>Mon CV</strong></ng-container></small>
+        <h1>{{section==='dashboard'?'Tableau de bord':section==='offres'?'Offres d’emploi':section==='offre-form'?(editingId?'Modifier une offre':'Publier une offre'):section==='applications'?'Mes candidatures':section==='tests'?'Tests techniques':section==='cv'?'Mon CV':section==='users'?'Gestion des utilisateurs':'Mon profil'}}</h1>
+        <p class="page-subtitle" *ngIf="section==='dashboard' && role==='CANDIDATE'">Votre activité et vos prochaines étapes, au même endroit.</p>
+        <p class="page-subtitle" *ngIf="section==='offres' && role==='CANDIDATE'">Parcourez les opportunités et postulez en quelques minutes.</p>
+        <p class="page-subtitle" *ngIf="section==='offres' && role==='RECRUITER'">Retrouvez et gérez vos offres de recrutement.</p>
+        <p class="page-subtitle" *ngIf="section==='applications'">Suivez l’avancée de chaque candidature, sans perdre le fil.</p>
+        <p class="page-subtitle" *ngIf="section==='tests'">Passez vos tests chronométrés et consultez vos résultats publiés.</p>
+      </div>
+      <div class="header-actions">
+        <div class="bell-wrap" *ngIf="role==='CANDIDATE'">
+          <button type="button" class="bell" (click)="toggleNotifications()" [attr.aria-expanded]="showNotifications" aria-label="Notifications">
+            <svg class="bell-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+            <span class="badge" *ngIf="!showNotifications && unreadCount()">{{ badgeLabel() }}</span>
+          </button>
+          <div class="notif-panel" *ngIf="showNotifications">
+            <p class="notif-title">Notifications</p>
+            <p class="empty" *ngIf="!notifications().length">Aucune notification.</p>
+            <button type="button" class="notif-item" *ngFor="let n of notifications()" (click)="openNotification(n)" [class.unread]="!n.read">
+              <strong>{{n.title}}</strong>
+              <span>{{n.message}}</span>
+              <small>{{n.createdAt | date:'dd/MM/yyyy HH:mm'}}</small>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <header class="profile-toolbar" *ngIf="section==='profile'">
+      <div class="bell-wrap">
+        <button type="button" class="bell" (click)="toggleNotifications()" [attr.aria-expanded]="showNotifications" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 22a2.2 2.2 0 0 0 2.2-2.2H9.8A2.2 2.2 0 0 0 12 22Zm7-6.2V11a7 7 0 1 0-14 0v4.8L3 17.6V19h18v-1.4Z"/>
+          </svg>
+          <span class="badge" *ngIf="!showNotifications && unreadCount()">{{ badgeLabel() }}</span>
+        </button>
+        <div class="notif-panel" *ngIf="showNotifications">
+          <p class="notif-title">Notifications</p>
+          <p class="empty" *ngIf="!notifications().length">Aucune notification.</p>
+          <button type="button" class="notif-item" *ngFor="let n of notifications()" (click)="openNotification(n)" [class.unread]="!n.read">
+            <strong>{{n.title}}</strong>
+            <span>{{n.message}}</span>
+            <small>{{n.createdAt | date:'dd/MM/yyyy HH:mm'}}</small>
+          </button>
+        </div>
+      </div>
+    </header>
+
+
+        <section *ngIf="section==='dashboard' && role==='CANDIDATE'" class="candidate-dashboard ui-dashboard dash-human">
+      <div class="dash-welcome">
+        <div class="dash-welcome-copy">
+          <p class="dash-hello">Bonjour{{ me()?.firstName ? ', ' + me()?.firstName : '' }}</p>
+          <h2>Prêt à avancer sur votre recherche&nbsp;?</h2>
+          <p>Parcourez les offres du moment, suivez vos candidatures et gardez votre profil à jour.</p>
+          <a routerLink="/candidate/offres" class="dash-cta">Voir les offres</a>
+        </div>
+        <div class="dash-welcome-visual" aria-hidden="true"></div>
+      </div>
+
+      <div class="dash-metrics">
+        <a routerLink="/candidate/offres" class="dash-metric">
+          <span class="dash-metric-label">Offres disponibles</span>
+          <strong>{{publishedOffersCount()}}</strong>
+        </a>
+        <a routerLink="/candidate/candidatures" class="dash-metric">
+          <span class="dash-metric-label">Mes candidatures</span>
+          <strong>{{visibleApplicationsCount()}}</strong>
+        </a>
+        <a routerLink="/candidate/candidatures" class="dash-metric">
+          <span class="dash-metric-label">En cours</span>
+          <strong>{{countApplications(['PENDING','IN_PROGRESS','UNDER_REVIEW','EN_COURS'])}}</strong>
+        </a>
+        <a routerLink="/candidate/candidatures" class="dash-metric">
+          <span class="dash-metric-label">Acceptées</span>
+          <strong>{{countApplications(['ACCEPTED','ACCEPTEE','ACCEPTE'])}}</strong>
+        </a>
+      </div>
+
+      <div class="dash-layout">
+        <article class="dash-panel dash-offers">
+          <div class="dash-panel-head">
+            <h3>Offres récentes</h3>
+            <a routerLink="/candidate/offres">Tout voir</a>
+          </div>
+          <a class="dash-offer" *ngFor="let o of recentPublishedOffers()" [routerLink]="['/offres',o.id]">
+            <div class="dash-offer-main">
+              <strong>{{o.title}}</strong>
+              <small>{{o.location}} · {{o.contractType}}</small>
+            </div>
+            <span class="dash-offer-go" aria-hidden="true">→</span>
+          </a>
+          <p class="dash-empty" *ngIf="!recentPublishedOffers().length">Aucune offre publiée pour le moment.</p>
+        </article>
+
+        <aside class="dash-aside">
+          <article class="dash-panel dash-profile">
+            <h3>Votre profil</h3>
+            <p>Un profil complet aide les recruteurs à mieux comprendre votre parcours.</p>
+            <a routerLink="/candidate/profile" class="dash-link">Mettre à jour mon profil →</a>
+          </article>
+
+          <article class="dash-panel dash-quick">
+            <h3>Raccourcis</h3>
+            <a routerLink="/candidate/cv" class="dash-shortcut">
+              <span>Mon CV</span>
+              <small>Importer ou activer un document</small>
+            </a>
+            <a routerLink="/candidate/candidatures" class="dash-shortcut">
+              <span>Mes candidatures</span>
+              <small>Suivre l’avancement de vos demandes</small>
+            </a>
+          </article>
+        </aside>
+      </div>
+    </section>
+
+<section *ngIf="section==='dashboard' && role!=='CANDIDATE'">
+      <div class="welcome"><div><small>BIENVENUE SUR VOTRE ESPACE</small><h2>Bonjour 👋</h2><p>Retrouvez vos informations et gérez votre activité depuis un seul endroit.</p></div><span class="welcome-art">✧</span></div>
+      <div class="metrics"><article><span>Offres visibles</span><strong>{{offres().length}}</strong></article><article><span>Votre espace</span><strong>{{role==='RECRUITER'?'Recruteur':'Admin'}}</strong></article></div>
+      <div class="panel"><h3>Offres récentes</h3><div class="offer-row" *ngFor="let o of offres().slice(0,5)"><div><b>{{o.title}}</b><small>{{o.location}} · {{o.contractType}}</small></div><span class="chip">{{o.status}}</span></div></div>
+    </section>
+
+    <app-offres-list
+      *ngIf="section==='offres'"
+      [offres]="offres()"
+      [role]="role"
+      [appliedOffreIds]="appliedOffreIds()"
+      (offreAction)="action($event.id, $event.kind)">
+    </app-offres-list>
+
+    <section *ngIf="section==='offre-form'" class="panel form-panel">
+      <h3>Informations de l'offre</h3>
+      <form (ngSubmit)="saveOffre()">
+        <label>Intitulé du poste *<input [(ngModel)]="form.title" name="title" required></label>
+        <label>Description *<textarea [(ngModel)]="form.description" name="description" rows="6" required></textarea></label>
+        <div class="two">
+          <label>Localisation *<input [(ngModel)]="form.location" name="location" required></label>
+          <label>Expérience (années) *<input type="number" min="0" [(ngModel)]="form.experienceYears" name="experienceYears" required></label>
+        </div>
+        <div class="two">
+          <label>Type de contrat *<input [(ngModel)]="form.contractType" name="contractType" placeholder="Valeur autorisée par le backend" required></label>
+          <label>Mode de travail *<input [(ngModel)]="form.workMode" name="workMode" placeholder="Valeur autorisée par le backend" required></label>
+        </div>
+        <div class="two">
+          <label>Niveau d'études *<input [(ngModel)]="form.educationLevel" name="educationLevel" required></label>
+          <label>Date limite<input type="date" [(ngModel)]="form.deadline" name="deadline"></label>
+        </div>
+        <button class="btn" type="submit">Enregistrer l'offre</button>
+      </form>
+    </section>
+
+    <section *ngIf="section==='applications'" class="candidate-applications apps-page">
+
+      <div class="apps-welcome">
+        <div class="apps-welcome-copy">
+          <p class="apps-hello">Bonjour{{ me()?.firstName ? ', ' + me()?.firstName : '' }}</p>
+          <h2>Où en êtes-vous&nbsp;?</h2>
+          <p>Chaque candidature a son rythme. Suivez les réponses et reprenez là où vous vous êtes arrêté.</p>
+          <a routerLink="/candidate/offres" class="apps-welcome-cta">Continuer ma recherche</a>
+        </div>
+        <div class="apps-welcome-visual" aria-hidden="true"></div>
+      </div>
+
+      <div class="apps-metrics">
+        <article class="apps-metric">
+          <span class="metric-ico mint" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5Zm-9 10 9 5 9-5M3 17l9 5 9-5"/></svg>
+          </span>
+          <div>
+            <span>Total</span>
+            <strong>{{visibleApplicationsCount()}}</strong>
+          </div>
+        </article>
+        <article class="apps-metric">
+          <span class="metric-ico amber" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          </span>
+          <div>
+            <span>En cours</span>
+            <strong>{{countApplications(['PENDING','IN_PROGRESS','UNDER_REVIEW','EN_COURS'])}}</strong>
+          </div>
+        </article>
+        <article class="apps-metric">
+          <span class="metric-ico green" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
+          </span>
+          <div>
+            <span>Acceptées</span>
+            <strong>{{countApplications(['ACCEPTED','ACCEPTEE','ACCEPTE'])}}</strong>
+          </div>
+        </article>
+        <article class="apps-metric">
+          <span class="metric-ico rose" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>
+          </span>
+          <div>
+            <span>Refusées</span>
+            <strong>{{countApplications(['REJECTED','REFUSED','REFUSEE'])}}</strong>
+          </div>
+        </article>
+      </div>
+
+      <div class="apps-panel">
+        <div class="apps-toolbar">
+          <form class="apps-search" (submit)="$event.preventDefault()">
+            <span class="search-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            </span>
+            <label class="sr-only" for="app-search">Rechercher par poste</label>
+            <input
+              id="app-search"
+              name="applicationQuery"
+              [ngModel]="applicationQuery()"
+              (ngModelChange)="applicationQuery.set($event)"
+              placeholder="Rechercher un poste…">
+          </form>
+          <label class="apps-filter">
+            <span class="filter-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 5h16l-6 7v5l-4 2v-7L4 5z"/></svg>
+            </span>
+            <select
+              [ngModel]="applicationStatus()"
+              (ngModelChange)="applicationStatus.set($event)"
+              aria-label="Filtrer par statut">
+              <option value="ALL">Tous les statuts</option>
+              <option *ngFor="let s of applicationStatuses()" [value]="s">{{statusLabel(s)}}</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="apps-results-head">
+          <strong>
+            {{filteredApplications().length}}
+            candidature{{filteredApplications().length > 1 ? 's' : ''}}
+          </strong>
+        </div>
+
+        <div class="apps-list">
+          <article class="app-card" *ngFor="let c of filteredApplications()">
+            <div class="app-mark" aria-hidden="true">
+              {{ (offerById().get(c.offreId)?.title || 'O').charAt(0) }}
+            </div>
+
+            <div class="app-main">
+              <div class="app-title-row">
+                <h2>{{offerById().get(c.offreId)?.title || 'Offre n°' + c.offreId}}</h2>
+                <span
+                  class="app-status"
+                  [class.pending]="['PENDING','IN_PROGRESS','UNDER_REVIEW','EN_COURS'].includes(c.status)"
+                  [class.accepted]="['ACCEPTED','ACCEPTEE','ACCEPTE'].includes(c.status)"
+                  [class.rejected]="['REJECTED','REFUSED','REFUSEE'].includes(c.status)"
+                  [class.withdrawn]="c.status === 'WITHDRAWN'">
+                  {{statusLabel(c.status)}}
+                </span>
+              </div>
+
+              <div class="app-meta">
+                <span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
+                  Envoyée le {{c.appliedAt | date:'dd/MM/yyyy'}}
+                </span>
+                <span *ngIf="offerById().get(c.offreId)?.location as loc">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.3 7-11a7 7 0 1 0-14 0c0 5.7 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                  {{loc}}
+                </span>
+                <span *ngIf="offerById().get(c.offreId)?.contractType as ct">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  {{ct}}
+                </span>
+              </div>
+
+              <div class="app-progress" aria-hidden="true">
+                <span class="step done"></span>
+                <span
+                  class="step"
+                  [class.done]="['PENDING','IN_PROGRESS','UNDER_REVIEW','EN_COURS','ACCEPTED','ACCEPTEE','ACCEPTE','REJECTED','REFUSED','REFUSEE'].includes(c.status)"
+                  [class.current]="['PENDING','IN_PROGRESS','UNDER_REVIEW','EN_COURS'].includes(c.status)"></span>
+                <span
+                  class="step"
+                  [class.done]="['ACCEPTED','ACCEPTEE','ACCEPTE'].includes(c.status)"
+                  [class.fail]="['REJECTED','REFUSED','REFUSEE'].includes(c.status)"
+                  [class.current]="['ACCEPTED','ACCEPTEE','ACCEPTE','REJECTED','REFUSED','REFUSEE'].includes(c.status)"></span>
+              </div>
+            </div>
+
+            <div class="app-side">
+              <a [routerLink]="['/offres',c.offreId]" class="apps-btn">
+                Voir l’offre
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </a>
+              <button type="button" class="apps-withdraw" *ngIf="canWithdraw(c)" (click)="withdraw(c.id)">Retirer ma candidature</button>
+            </div>
+          </article>
+
+          <div class="apps-empty" *ngIf="!filteredApplications().length">
+            <span class="empty-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5Zm-9 10 9 5 9-5M3 17l9 5 9-5"/></svg>
+            </span>
+            <strong *ngIf="!visibleApplicationsCount()">Aucune candidature pour le moment</strong>
+            <strong *ngIf="visibleApplicationsCount()">Aucune candidature ne correspond à votre recherche</strong>
+            <p *ngIf="!visibleApplicationsCount()">Explorez les offres et postulez en quelques minutes — vous retrouverez tout ici.</p>
+            <p *ngIf="visibleApplicationsCount()">Modifiez vos filtres ou élargissez votre recherche.</p>
+            <a routerLink="/candidate/offres" class="apps-btn">Explorer les offres</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section *ngIf="section==='tests'" class="candidate-tests-host">
+      <app-candidate-tests [embedded]="true" />
+    </section>
+
+    <section *ngIf="section==='cv'" class="candidate-cv cv-page" aria-label="Gestion du CV">
+      <div class="cv-shell">
+        <div class="cv-import-bar">
+          <label class="cv-import-btn" [class.disabled]="uploadingCv">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V8m0 0 4 4m-4-4-4 4"/><path d="M20 16.5A3.5 3.5 0 0 0 18 10h-1.1A6 6 0 0 0 5.5 13.5 3.5 3.5 0 0 0 7 20h12"/></svg>
+            {{ uploadingCv ? 'Importation…' : 'Importer un CV' }}
+            <input
+              #cvFileInput
+              type="file"
+              accept=".pdf,application/pdf"
+              [disabled]="uploadingCv"
+              (change)="upload($event)"
+              hidden
+              aria-label="Importer un CV PDF">
+          </label>
+          <span class="cv-import-hint">PDF · 5 Mo max</span>
+        </div>
+
+        <ul
+          class="cv-list"
+          *ngIf="cvs().length; else cvEmpty"
+          role="list"
+          aria-live="polite"
+          [class.cv-list-drop]="cvDragOver"
+          (dragover)="$event.preventDefault(); cvDragOver = true"
+          (dragleave)="cvDragOver = false"
+          (drop)="onCvDrop($event)">
+          <li
+            class="cv-row"
+            *ngFor="let c of cvs()"
+            [class.is-active]="c.active"
+            [class.is-open]="previewingCvId === c.id && !!cvUrl">
+            <div class="cv-file-ico" aria-hidden="true">PDF</div>
+            <div class="cv-row-main">
+              <strong [title]="c.fileName">{{ c.fileName }}</strong>
+              <p class="cv-row-meta">
+                {{ c.createdAt | date:'dd MMM yyyy' }} · {{ cvSize(c.fileSize) }}
+                <span *ngIf="c.active"> · Actif</span>
+              </p>
+            </div>
+            <div class="cv-row-actions">
+              <button
+                type="button"
+                class="btn"
+                *ngIf="!c.active"
+                [disabled]="!!activatingCvId || uploadingCv"
+                (click)="activateCv(c.id)">
+                {{ activatingCvId === c.id ? 'Activation…' : 'Utiliser' }}
+              </button>
+              <button
+                type="button"
+                class="btn"
+                *ngIf="!(previewingCvId === c.id && cvUrl)"
+                [disabled]="cvBusy && previewingCvId === c.id"
+                (click)="previewCv(c)">
+                {{ cvBusy && previewingCvId === c.id ? 'Chargement…' : 'Consulter' }}
+              </button>
+              <button type="button" class="btn secondary" (click)="download(c)">Télécharger</button>
+            </div>
+          </li>
+        </ul>
+
+        <ng-template #cvEmpty>
+          <div class="cv-empty">
+            <strong>Aucun CV</strong>
+            <p>Ajoutez un PDF pour postuler.</p>
+          </div>
+        </ng-template>
+      </div>
+
+      <div class="cv-viewer" *ngIf="cvUrl || (cvBusy && previewingCvId)">
+        <div class="cv-viewer-bar">
+          <div>
+            <span class="cv-viewer-label">Aperçu</span>
+            <strong>{{ previewingCvName || 'CV' }}</strong>
+          </div>
+          <button
+            type="button"
+            class="cv-viewer-close"
+            (click)="closeCvPreview()"
+            [attr.aria-label]="cvBusy ? 'Annuler le chargement' : 'Fermer l’aperçu'"
+            [attr.title]="cvBusy ? 'Annuler' : 'Fermer'">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <p class="cv-viewer-loading" *ngIf="cvBusy && !cvUrl">Chargement du CV…</p>
+        <iframe *ngIf="cvUrl as previewSrc" class="cv-frame" [src]="previewSrc" title="Aperçu du CV"></iframe>
+      </div>
+    </section>
+
+    <section *ngIf="section==='users'" class="panel">
+      <h3>Utilisateurs</h3>
+      <p *ngIf="!users().length">Aucun utilisateur à afficher.</p>
+      <div class="offer-row" *ngFor="let u of users()">
+        <div>
+          <b>{{u.firstName}} {{u.lastName}}</b>
+          <small>{{u.email}}</small>
+        </div>
+        <span class="chip">{{u.role||'Utilisateur'}}</span>
+      </div>
+    </section>
+
+    <section *ngIf="section==='profile'" class="profile-page profile-modern">
+      <ng-container *ngIf="me() as u">
+
+        <header class="profile-page-head">
+          <div>
+            <p class="breadcrumb">DechliRecrutement / Candidat / <strong>Mon profil</strong></p>
+            <h1>Mon profil</h1>
+          </div>
+        </header>
+
+        <article class="profile-hero">
+          <div class="hero-photo" [class.has-img]="!!(photoPreviewUrl || pictureUrl) && !photoBroken">
+            <img
+              *ngIf="(photoPreviewUrl || pictureUrl) && !photoBroken && !editingPhoto"
+              [src]="photoPreviewUrl || pictureUrl"
+              alt="Photo de profil"
+              (error)="photoBroken=true">
+            <span *ngIf="((!photoPreviewUrl && !pictureUrl) || photoBroken) && !editingPhoto">{{initials(u)}}</span>
+            <button
+              type="button"
+              class="photo-camera"
+              (click)="openPhotoEditor(photoFileInput)"
+              aria-label="Régler ou changer la photo de profil">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            </button>
+            <input #photoFileInput type="file" accept="image/jpeg,image/png,image/webp" (change)="selectProfilePhoto($event)" hidden aria-label="Sélectionner une photo de profil">
+          </div>
+
+          <div class="hero-meta">
+            <p class="hero-hello">Bonjour{{ u.firstName ? ', ' + u.firstName : '' }}</p>
+            <h2>{{u.firstName}} {{u.lastName}}</h2>
+            <div class="hero-contacts">
+              <span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 7 9-7"/></svg>
+                {{u.email}}
+              </span>
+              <span *ngIf="u.phone">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 4h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5L16 13.5l4 1.5v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4Z"/></svg>
+                {{u.phone}}
+              </span>
+            </div>
+            <div class="hero-about" *ngIf="role==='CANDIDATE'">
+              <ng-container *ngIf="!editingDescription">
+                <div class="hero-about-row">
+                  <p class="hero-excerpt" *ngIf="u.description; else noHeroAbout">{{ u.description }}</p>
+                  <ng-template #noHeroAbout>
+                    <p class="hero-excerpt muted">Ajoutez une courte présentation pour les recruteurs.</p>
+                  </ng-template>
+                  <button
+                    type="button"
+                    class="icon-edit"
+                    (click)="startEditDescription()"
+                    aria-label="Modifier la présentation"
+                    title="Modifier">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z"/></svg>
+                  </button>
+                </div>
+              </ng-container>
+              <form *ngIf="editingDescription" class="hero-about-form" (ngSubmit)="saveDescription()">
+                <label class="sr-only" for="candidate-description">À propos de moi</label>
+                <textarea
+                  id="candidate-description"
+                  name="candidateDescription"
+                  [(ngModel)]="descriptionForm"
+                  maxlength="1000"
+                  rows="3"
+                  placeholder="Présentez brièvement votre parcours et vos objectifs professionnels."></textarea>
+                <div class="hero-about-actions">
+                  <small>{{ descriptionForm.length }} / 1000</small>
+                  <div class="inline-actions">
+                    <button type="submit" class="btn" [disabled]="savingDescription">
+                      {{ savingDescription ? 'Enregistrement…' : 'Enregistrer' }}
+                    </button>
+                    <button type="button" class="btn secondary" (click)="cancelEditDescription()" [disabled]="savingDescription">Annuler</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="hero-aside" aria-hidden="true"></div>
+        </article>
+
+        <div class="profile-stats-bar">
+          <div class="profile-stat">
+            <strong>{{ skills().length }}</strong>
+            <span>Compétences</span>
+          </div>
+          <div class="profile-stat">
+            <strong>{{ experiences().length }}</strong>
+            <span>Expériences</span>
+          </div>
+          <div class="profile-stat">
+            <strong>{{ educations().length }}</strong>
+            <span>Formations</span>
+          </div>
+          <div class="profile-stat">
+            <strong>{{ visibleApplicationsCount() }}</strong>
+            <span>Candidatures</span>
+          </div>
+        </div>
+
+        <div class="photo-edit" *ngIf="editingPhoto && photoPreviewUrl">
+          <div class="photo-edit-copy">
+            <strong>Réglez votre photo</strong>
+            <p>Glissez pour cadrer, utilisez le zoom, puis enregistrez.</p>
+          </div>
+          <div
+            class="photo-stage"
+            [class.dragging]="photoDragging"
+            (pointerdown)="onPhotoPointerDown($event)"
+            (pointermove)="onPhotoPointerMove($event)"
+            (pointerup)="onPhotoPointerUp($event)"
+            (pointercancel)="onPhotoPointerUp($event)">
+            <img [src]="photoPreviewUrl" [style.transform]="photoTransform" alt="Aperçu photo" draggable="false">
+          </div>
+          <label class="photo-zoom">
+            <span>Zoom</span>
+            <input type="range" min="1" max="2.5" step="0.02" [(ngModel)]="photoZoom" name="photoZoom">
+          </label>
+          <div class="inline-actions photo-edit-actions">
+            <button class="btn secondary" type="button" (click)="resetPhotoAdjust()">Réinitialiser</button>
+            <button class="btn secondary" type="button" (click)="photoFileInput.click()">Autre image</button>
+            <button class="btn" type="button" (click)="savePhoto()" [disabled]="savingProfile">
+              {{ savingProfile ? 'Enregistrement…' : 'Enregistrer' }}
+            </button>
+            <button class="btn secondary" type="button" (click)="cancelEditPhoto()" [disabled]="savingProfile">Annuler</button>
+          </div>
+        </div>
+
+        <div class="profile-top-grid">
+          <article class="profile-card personal-card">
+            <div class="card-head">
+              <h3>
+                <span class="section-svg" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2z"/></svg></span>
+                Informations personnelles
+              </h3>
+              <button type="button" class="icon-edit" *ngIf="!editingProfile" (click)="startEditProfile()" aria-label="Modifier les informations" title="Modifier">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z"/></svg>
+              </button>
+            </div>
+            <form *ngIf="editingProfile" class="profile-form" (ngSubmit)="saveProfile()">
+              <div class="profile-grid">
+                <label>Prénom<input [(ngModel)]="profileForm.firstName" name="firstName" maxlength="50" required></label>
+                <label>Nom<input [(ngModel)]="profileForm.lastName" name="lastName" maxlength="50" required></label>
+                <label>Email<input [value]="u.email" name="email" disabled><small>L’email ne peut pas être modifié.</small></label>
+                <label>Téléphone<input [(ngModel)]="profileForm.phone" name="phone" maxlength="20" placeholder="Non renseigné"></label>
+              </div>
+              <div class="inline-actions">
+                <button class="btn" type="submit" [disabled]="savingProfile">{{savingProfile?'Enregistrement…':'Enregistrer'}}</button>
+                <button class="btn secondary" type="button" (click)="cancelEditProfile()">Annuler</button>
+              </div>
+            </form>
+            <div class="personal-rows" *ngIf="!editingProfile">
+              <div>
+                <span class="row-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2z"/></svg></span>
+                <span>Prénom</span><strong>{{u.firstName}}</strong>
+              </div>
+              <div>
+                <span class="row-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2z"/></svg></span>
+                <span>Nom</span><strong>{{u.lastName}}</strong>
+              </div>
+              <div>
+                <span class="row-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 7 9-7"/></svg></span>
+                <span>Email</span><strong>{{u.email}}</strong>
+              </div>
+              <div>
+                <span class="row-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.5 4h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5L16 13.5l4 1.5v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4Z"/></svg></span>
+                <span>Téléphone</span><strong>{{u.phone || 'Non renseigné'}}</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="profile-card cv-summary-card">
+            <div class="card-head">
+              <h3>
+                <span class="section-svg" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm9 0v6h5M8 13h8M8 17h8"/></svg></span>
+                Mon CV
+              </h3>
+              <a routerLink="/candidate/cv" class="link-manage icon-manage" title="Gérer mes CV" aria-label="Gérer mes CV">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z"/></svg>
+              </a>
+            </div>
+            <ng-container *ngIf="cvs().length; else noCv">
+              <div class="cv-summary" *ngIf="(activeCv() || cvs()[0]) as cv">
+                <div class="cv-doc">
+                  <div class="cv-doc-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg>
+                    <em>PDF</em>
+                  </div>
+                  <div class="cv-doc-body">
+                    <div class="cv-doc-top">
+                      <strong [title]="cv.fileName">{{ cv.fileName }}</strong>
+                      <span class="cv-active-pill" *ngIf="cv.active">CV actif</span>
+                    </div>
+                    <ul class="cv-doc-meta">
+                      <li>Ajouté le {{ cv.createdAt | date:'dd MMM yyyy' }}</li>
+                      <li>{{ cvSize(cv.fileSize) }}</li>
+                    </ul>
+                    <p class="cv-hint">Joint automatiquement à vos candidatures.</p>
+                  </div>
+                </div>
+                <div class="cv-actions">
+                  <label class="cv-act" [class.disabled]="uploadingCv">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                    {{ uploadingCv ? 'Envoi…' : 'Remplacer' }}
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      [disabled]="uploadingCv"
+                      (change)="upload($event)"
+                      hidden>
+                  </label>
+                  <a routerLink="/candidate/cv" class="cv-act primary">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Consulter le CV
+                  </a>
+                </div>
+              </div>
+            </ng-container>
+            <ng-template #noCv>
+              <div class="cv-summary empty-cv">
+                <span class="cv-empty-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5M12 11v6m0 0 3-3m-3 3-3-3"/></svg>
+                </span>
+                <p class="empty">Aucun CV pour l’instant</p>
+                <p class="cv-hint">Importez un PDF (5 Mo max) pour postuler.</p>
+                <label class="btn" [class.disabled]="uploadingCv">
+                  {{ uploadingCv ? 'Envoi…' : 'Ajouter un CV' }}
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    [disabled]="uploadingCv"
+                    (change)="upload($event)"
+                    hidden>
+                </label>
+              </div>
+            </ng-template>
+          </article>
+        </div>
+
+        <div class="profile-bottom-grid">
+          <article class="profile-card skills-card">
+            <div class="card-head">
+              <h3>
+                <span class="section-svg" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.2 4.5L19 9l-3.5 3.4.8 4.8L12 15.2 7.7 17.2l.8-4.8L5 9l4.8-1.5L12 3Z"/></svg></span>
+                Compétences
+                <span class="card-count" *ngIf="skills().length">{{skills().length}}</span>
+              </h3>
+              <button
+                type="button"
+                class="link-manage"
+                [class.icon-close]="managingCareer"
+                [class.icon-manage]="!managingCareer"
+                (click)="toggleCareer()"
+                [attr.aria-label]="managingCareer ? 'Fermer' : 'Gérer les compétences'"
+                [title]="managingCareer ? 'Fermer' : 'Gérer'">
+                <svg *ngIf="!managingCareer" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z"/></svg>
+                <span *ngIf="managingCareer" aria-hidden="true">×</span>
+              </button>
+            </div>
+            <div class="card-body soft-panel" *ngIf="skills().length; else emptySkills">
+              <div class="skill-tags">
+                <span class="skill-tag" *ngFor="let s of skills()" [attr.data-level]="s.level">
+                  <span class="skill-dot" aria-hidden="true"></span>
+                  <span class="skill-name">{{s.name}}</span>
+                  <small class="skill-level">{{skillLabel(s.level)}}</small>
+                  <span class="skill-controls" *ngIf="managingCareer && role==='CANDIDATE'">
+                    <button type="button" (click)="editSkill(s)" aria-label="Modifier la compétence">✎</button>
+                    <button type="button" (click)="removeSkill(s.id)" aria-label="Supprimer la compétence">×</button>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <ng-template #emptySkills>
+              <div class="empty-panel">
+                <p class="empty">Aucune compétence enregistrée.</p>
+              </div>
+            </ng-template>
+            <form *ngIf="managingCareer && role==='CANDIDATE'" class="skill-form" (ngSubmit)="saveSkill()">
+              <label>Compétence<input [(ngModel)]="skillForm.name" name="skillName" maxlength="100" required></label>
+              <label>Niveau<select [(ngModel)]="skillForm.level" name="skillLevel"><option *ngFor="let l of skillLevels" [ngValue]="l">{{skillLabel(l)}}</option></select></label>
+              <div class="inline-actions">
+                <button class="btn" type="submit" [disabled]="savingSkill">{{editingSkillId?'Mettre à jour':'Ajouter'}}</button>
+                <button class="btn secondary" type="button" *ngIf="editingSkillId" (click)="editingSkillId=0;skillForm={name:'',level:'BEGINNER'}">Annuler</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="profile-card experience-card">
+            <div class="card-head">
+              <h3>
+                <span class="section-svg" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
+                Expérience
+                <span class="card-count" *ngIf="experiences().length">{{experiences().length}}</span>
+              </h3>
+              <button
+                type="button"
+                class="link-manage"
+                [class.icon-close]="managingExperiences"
+                [class.icon-manage]="!managingExperiences"
+                (click)="toggleExperiences()"
+                [attr.aria-label]="managingExperiences ? 'Fermer' : 'Gérer les expériences'"
+                [title]="managingExperiences ? 'Fermer' : 'Gérer'">
+                <svg *ngIf="!managingExperiences" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z"/></svg>
+                <span *ngIf="managingExperiences" aria-hidden="true">×</span>
+              </button>
+            </div>
+
+            <div class="career-stack" *ngIf="experiences().length; else emptyExperiences">
+              <div class="career-item" *ngFor="let exp of experiences()">
+                <div class="career-item-top">
+                  <span class="career-role">{{exp.jobTitle}}</span>
+                  <span class="career-entry-actions" *ngIf="managingExperiences && role==='CANDIDATE'">
+                    <button type="button" (click)="editExperience(exp)" aria-label="Modifier l'expérience" title="Modifier">✎</button>
+                    <button type="button" (click)="removeExperience(exp.id)" aria-label="Supprimer l'expérience" title="Supprimer">×</button>
+                  </span>
+                </div>
+                <dl class="career-meta">
+                  <div>
+                    <dt>Entreprise</dt>
+                    <dd>{{exp.company}}</dd>
+                  </div>
+                  <div>
+                    <dt>Période</dt>
+                    <dd>{{exp.startDate | date:'MM/yyyy'}} — {{exp.endDate ? (exp.endDate | date:'MM/yyyy') : 'Aujourd’hui'}}</dd>
+                  </div>
+                </dl>
+                <p *ngIf="exp.description" class="career-description">{{exp.description}}</p>
+              </div>
+            </div>
+            <ng-template #emptyExperiences>
+              <div class="empty-panel">
+                <p class="empty">Aucune expérience renseignée.</p>
+              </div>
+            </ng-template>
+
+            <form *ngIf="managingExperiences && role==='CANDIDATE'" class="skill-form career-form" (ngSubmit)="saveExperience()">
+              <label>Poste occupé *<input [(ngModel)]="experienceForm.jobTitle" name="experienceJobTitle" maxlength="150" required></label>
+              <label>Entreprise *<input [(ngModel)]="experienceForm.company" name="experienceCompany" maxlength="150" required></label>
+              <label>Date de début *<input type="date" [(ngModel)]="experienceForm.startDate" name="experienceStartDate" required></label>
+              <label>Date de fin<input type="date" [(ngModel)]="experienceForm.endDate" name="experienceEndDate"></label>
+              <label>Description<textarea [(ngModel)]="experienceForm.description" name="experienceDescription" rows="3"></textarea></label>
+              <div class="inline-actions">
+                <button class="btn" type="submit" [disabled]="savingExperience">{{savingExperience?'Enregistrement…':(editingExperienceId?'Mettre à jour':'Ajouter')}}</button>
+                <button class="btn secondary" type="button" *ngIf="editingExperienceId" (click)="resetExperienceForm()">Annuler</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="profile-card education-card">
+            <div class="card-head">
+              <h3>
+                <span class="section-svg" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19h16M7 16V9l5-4 5 4v7"/></svg></span>
+                Formations
+                <span class="card-count" *ngIf="educations().length">{{educations().length}}</span>
+              </h3>
+              <button
+                type="button"
+                class="link-manage"
+                [class.icon-close]="managingEducations"
+                [class.icon-manage]="!managingEducations"
+                (click)="toggleEducations()"
+                [attr.aria-label]="managingEducations ? 'Fermer' : 'Gérer les formations'"
+                [title]="managingEducations ? 'Fermer' : 'Gérer'">
+                <svg *ngIf="!managingEducations" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z"/></svg>
+                <span *ngIf="managingEducations" aria-hidden="true">×</span>
+              </button>
+            </div>
+
+            <div class="career-stack" *ngIf="educations().length; else emptyEducations">
+              <div class="career-item" *ngFor="let edu of educations()">
+                <div class="career-item-top">
+                  <span class="career-role">{{edu.degree}}</span>
+                  <span class="career-entry-actions" *ngIf="managingEducations && role==='CANDIDATE'">
+                    <button type="button" (click)="editEducation(edu)" aria-label="Modifier la formation" title="Modifier">✎</button>
+                    <button type="button" (click)="removeEducation(edu.id)" aria-label="Supprimer la formation" title="Supprimer">×</button>
+                  </span>
+                </div>
+                <dl class="career-meta">
+                  <div>
+                    <dt>Établissement</dt>
+                    <dd>{{edu.institution}}</dd>
+                  </div>
+                  <div *ngIf="edu.fieldOfStudy">
+                    <dt>Domaine</dt>
+                    <dd>{{edu.fieldOfStudy}}</dd>
+                  </div>
+                  <div>
+                    <dt>Période</dt>
+                    <dd>{{edu.startDate | date:'MM/yyyy'}} — {{edu.endDate ? (edu.endDate | date:'MM/yyyy') : 'Aujourd’hui'}}</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+            <ng-template #emptyEducations>
+              <div class="empty-panel">
+                <p class="empty">Aucune formation renseignée.</p>
+              </div>
+            </ng-template>
+
+            <form *ngIf="managingEducations && role==='CANDIDATE'" class="skill-form career-form" (ngSubmit)="saveEducation()">
+              <label>Établissement *<input [(ngModel)]="educationForm.institution" name="educationInstitution" maxlength="150" required></label>
+              <label>Diplôme *<input [(ngModel)]="educationForm.degree" name="educationDegree" maxlength="150" required></label>
+              <label>Domaine d’études *<input [(ngModel)]="educationForm.fieldOfStudy" name="educationFieldOfStudy" maxlength="150" required></label>
+              <label>Date de début *<input type="date" [(ngModel)]="educationForm.startDate" name="educationStartDate" required></label>
+              <label>Date de fin<input type="date" [(ngModel)]="educationForm.endDate" name="educationEndDate"></label>
+              <div class="inline-actions">
+                <button class="btn" type="submit" [disabled]="savingEducation">{{savingEducation?'Enregistrement…':(editingEducationId?'Mettre à jour':'Ajouter')}}</button>
+                <button class="btn secondary" type="button" *ngIf="editingEducationId" (click)="resetEducationForm()">Annuler</button>
+              </div>
+            </form>
+          </article>
+        </div>
+
+      </ng-container>
+    </section>
+  </main>
+</div>
+
+@if (cvConfirmOpen && pendingCvFile) {
+  <div class="cv-confirm-backdrop" (click)="cancelCvConfirm()" aria-hidden="true"></div>
+  <div
+    class="cv-confirm-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cv-confirm-title"
+    aria-describedby="cv-confirm-desc">
+    <header>
+      <h3 id="cv-confirm-title">Enregistrer ce CV ?</h3>
+      <button type="button" class="cv-confirm-x" aria-label="Fermer" (click)="cancelCvConfirm()" [disabled]="uploadingCv">×</button>
+    </header>
+    <div class="cv-confirm-file">
+      <span class="pdf-icon" aria-hidden="true">PDF</span>
+      <div>
+        <strong [title]="pendingCvFile.name">{{ pendingCvFile.name }}</strong>
+        <small>{{ cvSize(pendingCvFile.size) }} · PDF · 5 Mo max</small>
+      </div>
+    </div>
+    <p class="cv-confirm-note" id="cv-confirm-desc">Le fichier sera ajouté à vos documents. Vous pourrez ensuite le choisir comme CV actif.</p>
+    <div class="cv-confirm-actions">
+      <button type="button" class="btn secondary" (click)="cancelCvConfirm()" [disabled]="uploadingCv">Annuler</button>
+      <button type="button" class="btn" (click)="confirmCvSave()" [disabled]="uploadingCv">
+        {{ uploadingCv ? 'Enregistrement…' : 'Enregistrer' }}
+      </button>
+    </div>
+  </div>
+}

@@ -1,0 +1,114 @@
+<section class="r-page">
+  <a routerLink="/admin/candidatures" class="back">Retour aux candidatures</a>
+
+
+  @if (loading) {
+    <p class="r-empty">Chargement du profil…</p>
+  } @else if (dossier) {
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">{{ dossier.offreTitle }}</p>
+        <h1>{{ dossier.firstName }} {{ dossier.lastName }}</h1>
+        <p class="when">{{ dossier.appliedAt | date: 'longDate' }}</p>
+      </div>
+      <span class="r-chip" [ngClass]="statusClass(dossier.status)">{{ labelStatus(dossier.status) }}</span>
+    </header>
+
+    <section class="score-line">
+      <div>
+        <span>Matching</span>
+        <strong>{{ matchHeadline() }}</strong>
+      </div>
+      <div>
+        <span>Test technique</span>
+        <strong>{{ testsReady ? testScoreLabel() : 'Indisponible' }}</strong>
+      </div>
+      <div>
+        @if (dossier.cv) {
+          <button type="button" class="r-btn" [disabled]="cvBusy" (click)="cvUrl ? closeCv() : openCv()">
+            {{ cvBusy ? 'Chargement…' : (cvUrl ? 'Fermer le CV' : 'Consulter le CV') }}
+          </button>
+        } @else {
+          <span>CV</span>
+          <strong>Indisponible</strong>
+        }
+      </div>
+    </section>
+
+    @if (cvUrl) {
+      <iframe class="cv-frame" [src]="cvUrl" title="CV du candidat"></iframe>
+    }
+
+    @if (featureRows().length || explanations().length || matchedSkills().length || missingSkills().length) {
+      <section class="r-panel">
+        <h3>Lecture du matching</h3>
+        @if (featureRows().length) {
+          <div class="facts">
+            @for (row of featureRows(); track row.label) {
+              <div><span>{{ row.label }}</span><strong>{{ row.value }}</strong></div>
+            }
+          </div>
+        }
+        @if (matchedSkills().length) {
+          <p class="skill-line"><span>Présentes</span> {{ matchedSkills().join(', ') }}</p>
+        }
+        @if (missingSkills().length) {
+          <p class="skill-line miss"><span>Absentes</span> {{ missingSkills().join(', ') }}</p>
+        }
+        @if (explanations().length) {
+          <ul class="explain">
+            @for (line of explanations(); track line) {
+              <li>{{ line }}</li>
+            }
+          </ul>
+        }
+      </section>
+    }
+
+    @if (dossier.description) {
+      <section class="r-panel">
+        <h3>Présentation</h3>
+        <p class="desc">{{ dossier.description }}</p>
+      </section>
+    }
+
+    <div class="grid">
+      <section class="r-panel">
+        <h3>Compétences</h3>
+        @if (!dossier.skills.length) {
+          <p class="r-empty">Aucune.</p>
+        } @else {
+          @for (s of dossier.skills; track s.id) {
+            <div class="line"><strong>{{ s.name }}</strong><small>{{ s.level }}</small></div>
+          }
+        }
+      </section>
+      <section class="r-panel">
+        <h3>Expériences</h3>
+        @if (!dossier.experiences.length) {
+          <p class="r-empty">Aucune.</p>
+        } @else {
+          @for (e of dossier.experiences; track e.id) {
+            <div class="line">
+              <strong>{{ e.jobTitle }}</strong>
+              <small>{{ e.company }}</small>
+            </div>
+          }
+        }
+      </section>
+      <section class="r-panel">
+        <h3>Formations</h3>
+        @if (!dossier.educations.length) {
+          <p class="r-empty">Aucune.</p>
+        } @else {
+          @for (e of dossier.educations; track e.id) {
+            <div class="line">
+              <strong>{{ e.degree }}</strong>
+              <small>{{ e.institution }}</small>
+            </div>
+          }
+        }
+      </section>
+    </div>
+  }
+</section>

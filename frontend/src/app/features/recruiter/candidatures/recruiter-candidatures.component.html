@@ -1,0 +1,226 @@
+<section class="r-page cand-page">
+  <header class="page-hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Espace recruteur</p>
+      <h1>Candidatures</h1>
+      <p class="lede">
+        Matching, test et décision sur chaque profil.
+      </p>
+    </div>
+    <a routerLink="/recruiter/offres" class="r-btn secondary hero-link">Mes offres</a>
+  </header>
+
+  <div class="workspace">
+    <div class="toolbar">
+      <label class="filter-field grow">
+        <span>Recherche</span>
+        <input
+          type="search"
+          [(ngModel)]="q"
+          name="q"
+          placeholder="Candidat, offre, matching…"
+          (ngModelChange)="onSearchChange()"
+        />
+      </label>
+      <label class="filter-field grow">
+        <span>Offre</span>
+        <select [(ngModel)]="selectedOffreId" (ngModelChange)="onOffreChange()">
+          <option [ngValue]="null">Toutes mes offres</option>
+          @for (o of offres; track o.id) {
+            <option [ngValue]="o.id">{{ o.title }}</option>
+          }
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Tri</span>
+        <select [(ngModel)]="sortKey" name="sk" (ngModelChange)="onSortChange()">
+          <option value="date">Date</option>
+          <option value="name">Candidat</option>
+          <option value="match">Matching</option>
+          <option value="status">Statut</option>
+        </select>
+      </label>
+      <button type="button" class="r-btn ghost sort-dir" (click)="toggleDir()">
+        {{ sortDir === 'asc' ? 'Croissant' : 'Décroissant' }}
+      </button>
+    </div>
+
+    <div class="status-tabs" role="tablist" aria-label="Filtrer par statut">
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [class.active]="statusFilter === ''"
+        [attr.aria-selected]="statusFilter === ''"
+        (click)="setStatusFilter('')"
+      >
+        Toutes <em>{{ rows.length }}</em>
+      </button>
+      @for (s of statusTabs; track s.value) {
+        <button
+          type="button"
+          role="tab"
+          class="tab"
+          [class.active]="statusFilter === s.value"
+          [attr.aria-selected]="statusFilter === s.value"
+          (click)="setStatusFilter(s.value)"
+        >
+          {{ s.label }} <em>{{ countByStatus(s.value) }}</em>
+        </button>
+      }
+    </div>
+
+    <section class="board" aria-live="polite">
+      <div class="board-head">
+        <h2>
+          @if (loading) {
+            Chargement…
+          } @else {
+            {{ view.total }} candidature{{ view.total > 1 ? 's' : '' }}
+          }
+        </h2>
+      </div>
+
+      @if (loading) {
+        <div class="list-loading">
+          <div class="r-skeleton sk-row-lg"></div>
+          <div class="r-skeleton sk-row-lg"></div>
+          <div class="r-skeleton sk-row-lg"></div>
+        </div>
+      } @else if (!view.total) {
+        <div class="empty-block">
+          <p class="empty-title">Aucune candidature</p>
+          <p class="empty-text">
+            @if (statusFilter || selectedOffreId != null || q.trim()) {
+              Aucun résultat pour ces filtres.
+            } @else {
+              Les candidatures apparaîtront ici dès qu’un profil postule.
+            }
+          </p>
+          <a routerLink="/recruiter/offres" class="r-btn secondary">Voir mes offres</a>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table class="cand-table">
+            <thead>
+              <tr>
+                <th>Candidat</th>
+                <th>Offre</th>
+                <th>Statut</th>
+                <th>Matching</th>
+                <th>Test</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of view.rows; track row.id) {
+                <tr [attr.data-status]="row.status">
+                  <td>
+                    <a
+                      class="cand-name"
+                      [routerLink]="['/recruiter/candidatures', row.id, 'dossier']"
+                    >{{ row.candidateName }}</a>
+                    @if (row.otherOffersCount > 1) {
+                      <small class="more-offers" [attr.title]="row.otherOffers.join(', ')">
+                        {{ row.otherOffersCount }} offres
+                      </small>
+                    }
+                  </td>
+                  <td class="offre-cell">{{ row.offreTitle }}</td>
+                  <td>
+                    <span class="r-chip" [ngClass]="chipClass(row.status)">
+                      {{ labelStatus(row.status) }}
+                    </span>
+                  </td>
+                  <td class="fact-cell">{{ row.matchLabel }}</td>
+                  <td class="fact-cell">{{ row.testLabel }}</td>
+                  <td class="date-cell">{{ row.appliedAt | date: 'dd MMM yyyy' }}</td>
+                  <td class="action-cell">
+                    <div class="row-actions">
+                      @if (
+                        row.status !== 'WITHDRAWN' &&
+                        row.status !== 'ACCEPTED' &&
+                        row.status !== 'REJECTED'
+                      ) {
+                        @if (row.canInvite) {
+                          <button
+                            type="button"
+                            class="act soft"
+                            [disabled]="inviteBusyId === row.id"
+                            (click)="invite(row)"
+                          >
+                            {{ inviteBusyId === row.id ? '…' : 'Inviter' }}
+                          </button>
+                        }
+                        <button
+                          type="button"
+                          class="act soft"
+                          [disabled]="busyId === row.id"
+                          (click)="decide(row, 'UNDER_REVIEW')"
+                        >
+                          En revue
+                        </button>
+                        <button
+                          type="button"
+                          class="act solid"
+                          [disabled]="busyId === row.id || cannotAccept(row)"
+                          [attr.title]="acceptBlockedReason(row)"
+                          (click)="decide(row, 'ACCEPTED')"
+                        >
+                          Accepter
+                        </button>
+                        <button
+                          type="button"
+                          class="act danger"
+                          [disabled]="busyId === row.id"
+                          (click)="decide(row, 'REJECTED')"
+                        >
+                          Refuser
+                        </button>
+                      } @else if (row.status === 'ACCEPTED' || row.status === 'REJECTED') {
+                        <button
+                          type="button"
+                          class="act soft"
+                          [disabled]="busyId === row.id"
+                          (click)="decide(row, 'UNDER_REVIEW')"
+                        >
+                          Remettre en revue
+                        </button>
+                      }
+                      <a
+                        class="act ghost"
+                        [routerLink]="['/recruiter/candidatures', row.id, 'dossier']"
+                      >Profil</a>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (view.pages > 1) {
+          <div class="pager bottom">
+            <span>{{ view.total }} · page {{ view.page }}/{{ view.pages }}</span>
+            <button
+              type="button"
+              class="r-btn ghost"
+              [disabled]="view.page <= 1"
+              (click)="page = view.page - 1"
+            >
+              Précédent
+            </button>
+            <button
+              type="button"
+              class="r-btn ghost"
+              [disabled]="view.page >= view.pages"
+              (click)="page = view.page + 1"
+            >
+              Suivant
+            </button>
+          </div>
+        }
+      }
+    </section>
+  </div>
+</section>

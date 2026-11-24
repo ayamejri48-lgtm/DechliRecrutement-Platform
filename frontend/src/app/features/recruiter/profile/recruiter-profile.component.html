@@ -1,0 +1,283 @@
+<section class="r-page profile-page">
+
+
+  @if (photoHint) {
+    <div class="r-alert info">{{ photoHint }}</div>
+  }
+
+  @if (loading) {
+    <p class="r-empty">Chargement du profil…</p>
+  } @else if (user) {
+    <section class="identity-card">
+      <div class="hero-photo-wrap">
+        <div
+          class="avatar-lg"
+          [class.has-img]="!!displayPhoto"
+          aria-hidden="true"
+        >
+          @if (displayPhoto) {
+            <img [src]="displayPhoto" alt="" (error)="photoBroken = true" />
+          } @else {
+            {{ initials }}
+          }
+        </div>
+        <button
+          type="button"
+          class="photo-cam"
+          (click)="openPhotoEditor(photoFileInput)"
+          aria-label="Changer ou régler la photo"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M4 7h3l2-2h6l2 2h3v12H4V7z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+            <circle
+              cx="12"
+              cy="13"
+              r="3.2"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            />
+          </svg>
+        </button>
+        <input
+          #photoFileInput
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          (change)="selectProfilePhoto($event)"
+          hidden
+        />
+      </div>
+
+      <div class="identity-copy">
+        <h2>{{ user.firstName }} {{ user.lastName }}</h2>
+        <p>{{ user.email }}</p>
+        <span class="r-chip">RECRUTEUR</span>
+      </div>
+
+      @if (!editing) {
+        <button type="button" class="r-btn" (click)="startEdit()">
+          Modifier le profil
+        </button>
+      }
+    </section>
+
+    @if (editingPhoto && photoPreviewUrl) {
+      <section class="r-panel photo-edit">
+        <strong>Réglez votre photo</strong>
+        <p class="r-empty">
+          Zoomez et déplacez l’image dans le cadre circulaire.
+        </p>
+        <div
+          class="photo-stage"
+          [class.dragging]="photoDragging"
+          (pointerdown)="onPhotoPointerDown($event)"
+          (pointermove)="onPhotoPointerMove($event)"
+          (pointerup)="onPhotoPointerUp($event)"
+          (pointercancel)="onPhotoPointerUp($event)"
+        >
+          <img
+            [src]="photoPreviewUrl"
+            [style.transform]="photoTransform"
+            alt="Aperçu"
+            draggable="false"
+          />
+        </div>
+        <label class="photo-zoom">
+          Zoom
+          <input
+            type="range"
+            min="1"
+            max="2.5"
+            step="0.02"
+            [(ngModel)]="photoZoom"
+            name="photoZoom"
+          />
+        </label>
+        <div class="r-actions">
+          <button
+            type="button"
+            class="r-btn"
+            [disabled]="savingPhoto"
+            (click)="savePhoto()"
+          >
+            {{ savingPhoto ? 'Enregistrement…' : 'Enregistrer la photo' }}
+          </button>
+          <button
+            type="button"
+            class="r-btn secondary"
+            (click)="photoFileInput.click()"
+          >
+            Autre image
+          </button>
+          <button
+            type="button"
+            class="r-btn ghost"
+            (click)="cancelEditPhoto()"
+          >
+            Annuler
+          </button>
+        </div>
+      </section>
+    }
+
+    @if (statsLoading) {
+      <p class="r-empty stats-hint">Mise à jour des statistiques…</p>
+    }
+
+    <div class="r-metrics">
+      <a
+        class="r-metric metric-link"
+        routerLink="/recruiter/offres"
+        title="Voir toutes mes offres"
+      >
+        <span>Offres créées</span>
+        <strong>{{ stats.totalOffres }}</strong>
+        <small>Mes offres →</small>
+      </a>
+      <a
+        class="r-metric metric-link"
+        routerLink="/recruiter/offres"
+        [queryParams]="{ status: 'PUBLISHED' }"
+        title="Voir les offres publiées"
+      >
+        <span>Publiées</span>
+        <strong>{{ stats.published }}</strong>
+        <small>Filtrer →</small>
+      </a>
+      <a
+        class="r-metric metric-link"
+        routerLink="/recruiter/offres"
+        [queryParams]="{ status: 'DRAFT,CLOSED' }"
+        title="Voir brouillons et clôturées"
+      >
+        <span>Brouillons / clôturées</span>
+        <strong>{{ stats.draft }} / {{ stats.closed }}</strong>
+        <small>Gérer →</small>
+      </a>
+      <a
+        class="r-metric metric-link"
+        routerLink="/recruiter/candidatures"
+        title="Voir les candidatures reçues"
+      >
+        <span>Candidatures reçues</span>
+        <strong>{{ stats.candidatures }}</strong>
+        <small>Pipeline →</small>
+      </a>
+    </div>
+
+    <div class="profile-grid">
+      <section class="r-panel">
+        <div class="r-panel-head">
+          <h3>Coordonnées</h3>
+        </div>
+
+        @if (!editing) {
+          <div class="info-grid">
+            <div>
+              <span>Prénom</span>
+              <strong>{{ user.firstName }}</strong>
+            </div>
+            <div>
+              <span>Nom</span>
+              <strong>{{ user.lastName }}</strong>
+            </div>
+            <div>
+              <span>Email</span>
+              <strong>{{ user.email }}</strong>
+            </div>
+            <div>
+              <span>Téléphone</span>
+              <strong>{{ user.phone || '—' }}</strong>
+            </div>
+          </div>
+        } @else {
+          <form class="r-form" (ngSubmit)="save()">
+            <div class="r-two">
+              <label>
+                Prénom
+                <input
+                  [(ngModel)]="form.firstName"
+                  name="firstName"
+                  maxlength="50"
+                  required
+                />
+              </label>
+              <label>
+                Nom
+                <input
+                  [(ngModel)]="form.lastName"
+                  name="lastName"
+                  maxlength="50"
+                  required
+                />
+              </label>
+            </div>
+            <label>
+              Email (non modifiable)
+              <input [value]="user.email" disabled />
+            </label>
+            <label>
+              Téléphone
+              <input
+                [(ngModel)]="form.phone"
+                name="phone"
+                maxlength="20"
+                placeholder="Non renseigné"
+              />
+            </label>
+            <div class="r-actions">
+              <button type="submit" class="r-btn" [disabled]="saving">
+                {{ saving ? 'Enregistrement…' : 'Enregistrer' }}
+              </button>
+              <button
+                type="button"
+                class="r-btn secondary"
+                (click)="cancel()"
+                [disabled]="saving"
+              >
+                Annuler
+              </button>
+            </div>
+          </form>
+        }
+      </section>
+
+      <section class="r-panel">
+        <div class="r-panel-head">
+          <h3>Activité récente</h3>
+          <a routerLink="/recruiter/offres">Voir tout</a>
+        </div>
+        @if (!recentOffres.length) {
+          <p class="r-empty">Aucune offre pour le moment.</p>
+          <a routerLink="/recruiter/offre/new" class="r-btn empty-cta">
+            Créer une première offre
+          </a>
+        } @else {
+          @for (o of recentOffres; track o.id) {
+            <div class="r-row compact">
+              <div>
+                <strong>{{ o.title }}</strong>
+                <small>{{ o.location }} · {{ o.contractType }}</small>
+              </div>
+              <span class="r-chip" [ngClass]="statusClass(o.status)">
+                {{ labelStatus(o.status) }}
+              </span>
+              <a
+                class="r-btn ghost"
+                [routerLink]="['/recruiter/offre', o.id, 'edit']"
+              >
+                Éditer
+              </a>
+            </div>
+          }
+        }
+      </section>
+    </div>
+  }
+</section>

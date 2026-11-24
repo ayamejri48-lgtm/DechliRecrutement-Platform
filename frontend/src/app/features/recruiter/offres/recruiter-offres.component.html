@@ -1,0 +1,282 @@
+<section class="r-page offres-page">
+  <header class="page-hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Espace recruteur</p>
+      <h1>Mes offres</h1>
+      <p class="lede">
+        Brouillon → compétences → publication. Vos annonces, uniquement.
+      </p>
+    </div>
+    <a routerLink="/recruiter/offre/new" class="r-btn hero-cta">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path
+          d="M12 5v14M5 12h14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+        />
+      </svg>
+      Nouvelle offre
+    </a>
+  </header>
+
+
+  @if (createHint) {
+    <div class="r-alert info">
+      Brouillon créé — ouvrez-le pour ajouter les compétences avant publication.
+    </div>
+  }
+
+  <div class="workspace">
+    <div class="toolbar" role="search">
+      <label class="search-field grow">
+        <span class="sr-only">Rechercher un titre</span>
+        <svg class="field-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+          <path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+        <input
+          [(ngModel)]="title"
+          placeholder="Rechercher un poste…"
+          (keyup.enter)="search()"
+        />
+      </label>
+
+      <label class="search-field">
+        <span class="sr-only">Lieu</span>
+        <input
+          [(ngModel)]="location"
+          placeholder="Lieu"
+          (keyup.enter)="search()"
+        />
+      </label>
+
+      <select class="tool-select" [(ngModel)]="contractType" (change)="search()" aria-label="Contrat">
+        <option value="">Contrat</option>
+        @for (c of contracts; track c) {
+          <option [value]="c">{{ c }}</option>
+        }
+      </select>
+
+      <select class="tool-select" [(ngModel)]="workMode" (change)="search()" aria-label="Mode de travail">
+        <option value="">Mode</option>
+        @for (m of modes; track m) {
+          <option [value]="m">{{ labelMode(m) }}</option>
+        }
+      </select>
+
+      <select class="tool-select" [(ngModel)]="sort" (change)="search()" aria-label="Tri">
+        <option value="recent">Plus récentes</option>
+        <option value="oldest">Plus anciennes</option>
+        <option value="title">Titre A–Z</option>
+      </select>
+
+      @if (hasActiveFilters) {
+        <button type="button" class="reset-btn" (click)="resetFilters()">Réinitialiser</button>
+      }
+    </div>
+
+    <div class="status-tabs" role="tablist" aria-label="Filtrer par statut">
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [class.active]="status === ''"
+        [attr.aria-selected]="status === ''"
+        (click)="setStatusFilter('')"
+      >
+        Toutes <em>{{ allMine.length }}</em>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [class.active]="status === 'DRAFT'"
+        [attr.aria-selected]="status === 'DRAFT'"
+        (click)="setStatusFilter('DRAFT')"
+      >
+        Brouillons <em>{{ countByStatus('DRAFT') }}</em>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [class.active]="status === 'PUBLISHED'"
+        [attr.aria-selected]="status === 'PUBLISHED'"
+        (click)="setStatusFilter('PUBLISHED')"
+      >
+        Publiées <em>{{ countByStatus('PUBLISHED') }}</em>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [class.active]="status === 'CLOSED'"
+        [attr.aria-selected]="status === 'CLOSED'"
+        (click)="setStatusFilter('CLOSED')"
+      >
+        Clôturées <em>{{ countByStatus('CLOSED') }}</em>
+      </button>
+    </div>
+
+    <section class="board" aria-live="polite">
+      <div class="board-head">
+        <h2>
+          @if (loading) {
+            Chargement…
+          } @else {
+            {{ totalElements }} offre{{ totalElements > 1 ? 's' : '' }}
+          }
+        </h2>
+        <p class="board-hint">Cycle : brouillon · compétences · publication</p>
+      </div>
+
+      @if (loading) {
+        <div class="list-loading">
+          <div class="r-skeleton sk-row-lg"></div>
+          <div class="r-skeleton sk-row-lg"></div>
+          <div class="r-skeleton sk-row-lg"></div>
+        </div>
+      } @else if (!offres.length) {
+        <div class="empty-block">
+          <p class="empty-title">
+            @if (hasActiveFilters) {
+              Aucun résultat pour ces critères
+            } @else {
+              Aucune offre pour l’instant
+            }
+          </p>
+          <p class="empty-text">
+            @if (hasActiveFilters) {
+              Modifiez les filtres ou réinitialisez la recherche.
+            } @else {
+              Créez un brouillon, renseignez les compétences, puis publiez.
+            }
+          </p>
+          <div class="empty-actions">
+            @if (hasActiveFilters) {
+              <button type="button" class="r-btn secondary" (click)="resetFilters()">
+                Réinitialiser
+              </button>
+            }
+            <a routerLink="/recruiter/offre/new" class="r-btn">Nouvelle offre</a>
+          </div>
+        </div>
+      } @else {
+        <ul class="job-list">
+          @for (o of offres; track o.id) {
+            <li class="job-row" [attr.data-status]="o.status">
+              <div class="job-main">
+                <div class="job-top">
+                  <a
+                    class="job-title"
+                    [routerLink]="['/recruiter/offre', o.id, 'edit']"
+                  >{{ o.title }}</a>
+                  <span
+                    class="status-dot"
+                    [class.draft]="o.status === 'DRAFT'"
+                    [class.published]="o.status === 'PUBLISHED'"
+                    [class.closed]="o.status === 'CLOSED'"
+                  >
+                    {{ labelStatus(o.status) }}
+                  </span>
+                </div>
+
+                <p class="job-meta">
+                  <span>{{ o.location || 'Lieu non précisé' }}</span>
+                  <span class="sep" aria-hidden="true">·</span>
+                  <span>{{ labelContract(o.contractType) }}</span>
+                  <span class="sep" aria-hidden="true">·</span>
+                  <span>{{ labelMode(o.workMode) }}</span>
+                  <span class="sep" aria-hidden="true">·</span>
+                  <span>
+                    {{ o.experienceYears === 0 ? 'Débutant' : o.experienceYears + ' an(s)' }}
+                  </span>
+                  @if (o.educationLevel) {
+                    <span class="sep" aria-hidden="true">·</span>
+                    <span>{{ o.educationLevel }}</span>
+                  }
+                </p>
+
+                <p class="job-dates">
+                  @if (o.deadline) {
+                    <span>Échéance {{ formatDate(o.deadline) }}</span>
+                  }
+                  @if (o.deadline && o.createdAt) {
+                    <span class="sep" aria-hidden="true">·</span>
+                  }
+                  @if (o.createdAt) {
+                    <span class="muted">Créée {{ formatDate(o.createdAt) }}</span>
+                  }
+                </p>
+              </div>
+
+              <div class="job-side">
+                <a
+                  class="apps-quiet"
+                  [routerLink]="['/recruiter/candidatures']"
+                  [queryParams]="{ offreId: o.id }"
+                  [attr.title]="'Candidatures — ' + o.title"
+                >
+                  {{ candidatureCount(o) }}
+                  <span>candidatures</span>
+                </a>
+
+                <div class="r-actions job-actions">
+                  <a
+                    class="r-btn ghost"
+                    [routerLink]="['/recruiter/offre', o.id, 'edit']"
+                  >Éditer</a>
+                  @if (o.status === 'DRAFT') {
+                    <button
+                      type="button"
+                      class="r-btn"
+                      [disabled]="busyId === o.id"
+                      (click)="publish(o)"
+                    >
+                      Publier
+                    </button>
+                    <button
+                      type="button"
+                      class="r-btn danger"
+                      [disabled]="busyId === o.id"
+                      (click)="remove(o)"
+                    >
+                      Supprimer
+                    </button>
+                  }
+                  @if (o.status === 'PUBLISHED') {
+                    <button
+                      type="button"
+                      class="r-btn secondary"
+                      [disabled]="busyId === o.id"
+                      (click)="close(o)"
+                    >
+                      Clôturer
+                    </button>
+                  }
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+
+        <div class="list-pager">
+          <button type="button" class="pager-btn" [disabled]="page === 0" (click)="prev()">
+            ← Précédent
+          </button>
+          <span class="pager-info">{{ page + 1 }} / {{ totalPages || 1 }}</span>
+          <button
+            type="button"
+            class="pager-btn"
+            [disabled]="page >= totalPages - 1"
+            (click)="next()"
+          >
+            Suivant →
+          </button>
+        </div>
+      }
+    </section>
+  </div>
+</section>

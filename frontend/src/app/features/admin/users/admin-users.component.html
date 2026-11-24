@@ -1,0 +1,139 @@
+<section class="r-page">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Comptes</p>
+      <h1>Utilisateurs</h1>
+    </div>
+    <div class="head-actions">
+      <a class="r-btn ghost" routerLink="/admin/journal">Journal</a>
+      <button type="button" class="r-btn" (click)="openCreate()">Nouveau compte</button>
+    </div>
+  </header>
+
+
+  @if (showCreate) {
+    <section class="r-panel">
+      <h3>Nouveau compte</h3>
+      <form class="r-form" (ngSubmit)="createAccount()">
+        <label>Rôle
+          <select [(ngModel)]="form.role" name="accountRole" required>
+            <option value="CANDIDATE">Candidat</option>
+            <option value="RECRUITER">Recruteur</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+        </label>
+        <div class="r-two">
+          <label>Prénom<input [(ngModel)]="form.firstName" name="fn" required maxlength="50" /></label>
+          <label>Nom<input [(ngModel)]="form.lastName" name="ln" required maxlength="50" /></label>
+        </div>
+        <label>Email<input type="email" [(ngModel)]="form.email" name="em" required /></label>
+        <label>Téléphone<input type="tel" [(ngModel)]="form.phone" name="ph" required placeholder="+216 XX XXX XXX" /></label>
+        <label>Mot de passe
+          <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="form.password" name="pw" required placeholder="8 caractères minimum" autocomplete="new-password" />
+        </label>
+        <label>Confirmer le mot de passe
+          <input type="password" [(ngModel)]="form.confirmPassword" name="pw2" required placeholder="Confirmez le mot de passe" autocomplete="new-password" />
+        </label>
+        <button type="button" class="r-btn ghost" (click)="showPassword = !showPassword">{{ showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe' }}</button>
+        <div class="r-actions">
+          <button type="submit" class="r-btn" [disabled]="creating">{{ creating ? 'Création…' : 'Créer' }}</button>
+          <button type="button" class="r-btn ghost" (click)="showCreate = false">Annuler</button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <div class="filters">
+    <label class="grow">Recherche<input [(ngModel)]="q" name="q" placeholder="Nom ou email" (ngModelChange)="page = 1" /></label>
+    <label>Rôle
+      <select [(ngModel)]="roleFilter" name="role" (ngModelChange)="page = 1">
+        <option value="">Tous</option>
+        <option value="CANDIDATE">Candidat</option>
+        <option value="RECRUITER">Recruteur</option>
+        <option value="ADMIN">Admin</option>
+      </select>
+    </label>
+    <label>État
+      <select [(ngModel)]="enabledFilter" name="en" (ngModelChange)="page = 1">
+        <option value="">Tous</option>
+        <option value="1">Actifs</option>
+        <option value="0">Désactivés</option>
+      </select>
+    </label>
+    <label>Tri
+      <select [(ngModel)]="sortKey" name="sk" (ngModelChange)="page = 1">
+        <option value="name">Nom</option>
+        <option value="email">Email</option>
+        <option value="role">Rôle</option>
+      </select>
+    </label>
+    <button type="button" class="r-btn ghost" (click)="toggleDir()">{{ sortDir === 'asc' ? 'A → Z' : 'Z → A' }}</button>
+  </div>
+
+  @if (pending) {
+    <div class="confirm-overlay" (click)="cancelPending()">
+      <div class="confirm-box" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <p>{{ pending.message }}</p>
+        <div class="r-actions">
+          <button type="button" class="r-btn" [class.danger]="pending.kind === 'del'" (click)="confirmPending()">
+            {{ pending.kind === 'del' ? 'Supprimer' : 'Confirmer' }}
+          </button>
+          <button type="button" class="r-btn ghost" (click)="cancelPending()">Annuler</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <p class="r-empty">Chargement des comptes…</p>
+  } @else if (!filtered.length) {
+    <p class="r-empty">Aucun compte ne correspond.</p>
+  } @else {
+    <section class="sheet">
+      <div class="pager">
+        <span>{{ view.total }} compte(s) · {{ view.page }}/{{ view.pages }}</span>
+        <button type="button" class="r-btn ghost" [disabled]="view.page <= 1" (click)="page = view.page - 1">Précédent</button>
+        <button type="button" class="r-btn ghost" [disabled]="view.page >= view.pages" (click)="page = view.page + 1">Suivant</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr><th>Personne</th><th>Rôle</th><th>État</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (u of view.rows; track u.id) {
+              <tr>
+                <td>
+                  <div class="who">
+                    <strong>{{ u.firstName }} {{ u.lastName }}</strong>
+                    <small>{{ u.email }}</small>
+                  </div>
+                </td>
+                <td><span class="r-chip">{{ roleLabel(u.role) }}</span></td>
+                <td>
+                  <span class="r-chip" [class.rejected]="u.enabled === false" [class.accepted]="u.enabled !== false">
+                    {{ u.enabled === false ? 'Désactivé' : 'Actif' }}
+                  </span>
+                </td>
+                <td class="end">
+                  <div class="row-actions">
+                    @if (u.enabled !== false) {
+                      <button type="button" class="r-btn ghost" [disabled]="busyId === u.id || u.id === meId" (click)="deactivate(u)">
+                        {{ busyId === u.id ? '…' : 'Désactiver' }}
+                      </button>
+                    } @else {
+                      <button type="button" class="r-btn ghost" [disabled]="busyId === u.id" (click)="reactivate(u)">
+                        {{ busyId === u.id ? '…' : 'Réactiver' }}
+                      </button>
+                    }
+                    <button type="button" class="r-btn danger" [disabled]="busyId === u.id || u.id === meId" (click)="remove(u)">Supprimer</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</section>

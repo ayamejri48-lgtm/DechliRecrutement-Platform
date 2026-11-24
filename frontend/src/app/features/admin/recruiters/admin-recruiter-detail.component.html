@@ -1,0 +1,61 @@
+<section class="r-page">
+  <a routerLink="/admin/recruiters" class="back">Retour aux recruteurs</a>
+
+
+  @if (loading) {
+    <p class="r-empty">Chargement…</p>
+  } @else if (recruiter) {
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">{{ recruiter.email }}</p>
+        <h1>{{ recruiter.firstName }} {{ recruiter.lastName }}</h1>
+      </div>
+      <span class="r-chip" [class.rejected]="recruiter.enabled === false" [class.accepted]="recruiter.enabled !== false">
+        {{ recruiter.enabled === false ? 'Désactivé' : 'Actif' }}
+      </span>
+    </header>
+
+    <div class="pulse">
+      <div><span>Offres publiées</span><strong>{{ published() }}</strong></div>
+      <div><span>Candidatures reçues</span><strong>{{ applications() }}</strong></div>
+      <div>
+        <span>Offres avec test</span>
+        <strong>{{ testsReady ? withTest() : '—' }}</strong>
+      </div>
+    </div>
+
+    <section class="sheet">
+      <h3>Offres</h3>
+      @if (!offers.length) {
+        <p class="r-empty">Aucune offre pour ce recruteur.</p>
+      } @else {
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Offre</th>
+                <th>Statut</th>
+                <th class="num">Candidatures</th>
+                <th>Test</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (offre of offers; track offre.id) {
+                <tr>
+                  <td><strong>{{ offre.title }}</strong></td>
+                  <td><span class="r-chip" [ngClass]="statusClass(offre.status)">{{ statusLabel(offre.status) }}</span></td>
+                  <td class="num">{{ offre.applications }}</td>
+                  <td>{{ offre.testLabel }}</td>
+                  <td class="end">
+                    <a class="r-btn ghost" [routerLink]="['/admin/candidatures']" [queryParams]="{ offre: offre.id }">Candidatures</a>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+</section>

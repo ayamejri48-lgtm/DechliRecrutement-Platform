@@ -1,0 +1,40 @@
+<section class="r-page">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Contrôle</p>
+      <h1>Journal</h1>
+    </div>
+  </header>
+
+
+  @if (loading) {
+    <p class="r-empty">Chargement du journal…</p>
+  } @else if (!rows.length) {
+    <p class="r-empty">Aucune action enregistrée.</p>
+  } @else {
+    <section class="sheet">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Quand</th>
+              <th>Action</th>
+              <th>Compte concerné</th>
+              <th>Par</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows; track row.id) {
+              <tr>
+                <td>{{ row.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td><strong>{{ actionLabel(row.action) }}</strong></td>
+                <td>{{ row.targetEmail }}</td>
+                <td>{{ row.actorEmail }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</section>

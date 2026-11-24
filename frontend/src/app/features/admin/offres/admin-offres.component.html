@@ -1,0 +1,112 @@
+<section class="r-page">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Recrutement</p>
+      <h1>Offres</h1>
+    </div>
+  </header>
+
+  <div class="filters">
+    <label class="grow">Recherche<input [(ngModel)]="q" name="q" placeholder="Titre ou lieu" (ngModelChange)="page = 1" /></label>
+    <label>Statut
+      <select [(ngModel)]="status" name="st" (ngModelChange)="page = 1">
+        <option value="">Tous</option>
+        <option value="PUBLISHED">Publiée</option>
+        <option value="DRAFT">Brouillon</option>
+        <option value="CLOSED">Clôturée</option>
+      </select>
+    </label>
+    <label>Recruteur
+      <select [(ngModel)]="recruiterId" name="rid" (ngModelChange)="page = 1">
+        <option [ngValue]="null">Tous</option>
+        @for (r of recruiters; track r.id) {
+          <option [ngValue]="r.id">{{ r.firstName }} {{ r.lastName }}</option>
+        }
+      </select>
+    </label>
+    <label>Tri
+      <select [(ngModel)]="sortKey" name="sk" (ngModelChange)="page = 1">
+        <option value="title">Titre</option>
+        <option value="status">Statut</option>
+        <option value="deadline">Échéance</option>
+      </select>
+    </label>
+    <button type="button" class="r-btn ghost" (click)="toggleDir()">{{ sortDir === 'asc' ? 'A → Z' : 'Z → A' }}</button>
+  </div>
+
+  @if (loading || (alert === 'no-candidature' && !countsReady)) {
+    <p class="r-empty">Chargement des offres…</p>
+  } @else if (!filtered.length) {
+    <p class="r-empty">Aucune offre ne correspond.</p>
+  } @else {
+    <section class="sheet">
+      <div class="pager">
+        <span>{{ view.total }} offre(s) · {{ view.page }}/{{ view.pages }}</span>
+        <button type="button" class="r-btn ghost" [disabled]="view.page <= 1" (click)="page = view.page - 1">Précédent</button>
+        <button type="button" class="r-btn ghost" [disabled]="view.page >= view.pages" (click)="page = view.page + 1">Suivant</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Offre</th>
+              <th>Recruteur</th>
+              <th>Candidatures</th>
+              <th>Test</th>
+              <th>Statut</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (o of view.rows; track o.id) {
+              <tr [class.is-open]="selected?.id === o.id">
+                <td>
+                  <div class="who">
+                    <strong>{{ o.title }}</strong>
+                    <small>{{ o.location }} · {{ o.contractType }} · échéance {{ o.deadline || '—' }}</small>
+                  </div>
+                </td>
+                <td>{{ recruiterLabel(o.recruiterId) }}</td>
+                <td>{{ appCounts.get(o.id) || 0 }}</td>
+                <td>{{ testsReady ? testLabel(o.id) : '—' }}</td>
+                <td><span class="r-chip" [ngClass]="statusClass(o.status)">{{ labelStatus(o.status) }}</span></td>
+                <td class="end">
+                  <button type="button" class="r-btn ghost" (click)="openDetail(o)">Lire</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  @if (selected) {
+    <div class="offer-dialog" role="dialog" aria-modal="true" [attr.aria-label]="selected.title" (click)="selected = null">
+    <section class="r-panel detail" (click)="$event.stopPropagation()">
+      <div class="r-panel-head">
+        <h3>{{ selected.title }}</h3>
+        <button type="button" class="r-btn ghost" (click)="selected = null">Fermer</button>
+      </div>
+      <div class="facts">
+        <div><span>Statut</span><strong>{{ labelStatus(selected.status) }}</strong></div>
+        <div><span>Recruteur</span><strong>{{ recruiterLabel(selected.recruiterId) }}</strong></div>
+        <div><span>Contrat</span><strong>{{ selected.contractType }}</strong></div>
+        <div><span>Mode</span><strong>{{ selected.workMode }}</strong></div>
+        <div><span>Lieu</span><strong>{{ selected.location }}</strong></div>
+        <div><span>Expérience</span><strong>{{ selected.experienceYears }} ans</strong></div>
+        <div><span>Échéance</span><strong>{{ selected.deadline || '—' }}</strong></div>
+        <div><span>Candidatures</span><strong>{{ appCounts.get(selected.id) || 0 }}</strong></div>
+        <div><span>Compétences</span><strong>{{ skillLine() }}</strong></div>
+        @if (testsReady) {
+          <div><span>Test technique</span><strong>{{ testLabel(selected.id) }}</strong></div>
+        }
+      </div>
+      <p class="desc">{{ selected.description }}</p>
+      <a class="r-btn" [routerLink]="['/admin/candidatures']" [queryParams]="{ offre: selected.id }">
+        Voir les candidatures de cette offre
+      </a>
+    </section>
+    </div>
+  }
+</section>

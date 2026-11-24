@@ -1,0 +1,10 @@
+DechliRecrutement — améliorations visuelles
+- Offres d'emploi : cartes, filtres, boutons, espacement, responsive.
+- Mes candidatures : bannière, statistiques, liste, filtres.
+- Mon CV : bannière, zone de dépôt, documents.
+- Mon profil : sections, cartes, espacement.
+- Détail de l'offre et modale : cartes, typographie, bouton.
+- Dashboard : conservé depuis la livraison précédente.
+Aucune méthode métier, route ou API modifiée. OffreDetailComponent.ts : CSS uniquement dans le décorateur.
+Compilation non validée dans cet environnement Linux (node_modules natifs Windows incompatibles).
+Sous Windows : npm install --legacy-peer-deps puis npx ng build.
